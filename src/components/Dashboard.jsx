@@ -100,6 +100,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: color, fontSize: '0.75rem', fontWeight: '700', marginTop: '4px' }}>
                 <Icon size={12} />
                 {isIncrease ? '+' : ''}{percent.toFixed(0)}%
+                <span style={{ opacity: 0.8, marginLeft: '4px', fontWeight: '400', fontSize: '0.7rem' }}>({prev})</span>
             </div>
         );
     };
