@@ -42,6 +42,12 @@ function App() {
     }
   }, [session])
 
+  useEffect(() => {
+    if (session && activeInstanceId) {
+      handleRefresh()
+    }
+  }, [activeInstanceId])
+
   const loadInstancesAndTickets = async () => {
     setRefreshing(true)
     try {
