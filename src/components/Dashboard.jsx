@@ -31,11 +31,11 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             previous.start = todayStart - (86400 * daysToSubtract);
             previous.end = todayStart - (86400 * (daysToSubtract - 1));
         } else if (timeFilter === '7d') {
-            current.start = nowUnix - (86400 * 7);
+            current.start = todayStart - (86400 * 7);
             previous.start = current.start - (86400 * 7);
             previous.end = current.start;
         } else {
-            current.start = nowUnix - (86400 * 30);
+            current.start = todayStart - (86400 * 30);
             previous.start = current.start - (86400 * 30);
             previous.end = current.start;
         }
