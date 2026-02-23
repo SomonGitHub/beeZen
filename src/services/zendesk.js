@@ -1,22 +1,10 @@
 /**
- * Service pour la gestion des données Zendesk via PROXY CLOUDFLARE
- * Résout les problèmes de CORS et sécurise les credentials.
+ * Service pour la gestion des données Zendesk via PROXY CLOUDFLARE (Version D1 Delta Sync)
  */
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 
-// Cache simple en mémoire pour éviter de spammer l'API Incremental Export (limite 10 req/min)
-const ticketCache = {
-    data: null,
-    timestamp: 0,
-    instanceId: null,
-    startTime: 0
-};
-
 export const ZendeskService = {
-    /**
-     * Nettoie le domaine pour s'assurer qu'il est au bon format
-     */
     sanitizeDomain(domain) {
         if (!domain) return "";
         let clean = domain.replace(/https?:\/\//gi, '').replace(/:\/\//g, '');
@@ -25,103 +13,51 @@ export const ZendeskService = {
     },
 
     /**
-     * Récupère les tickets via le Cloudflare Worker Proxy avec mise en cache
+     * Nouvelle méthode d'analyse de tickets avec Delta Sync
      */
     async fetchTickets(instance, startTime = 0) {
         if (!instance || !instance.domain || !instance.token) return { tickets: [], users: [] };
 
-        // Vérification du cache (2 minutes de validité pour éviter les 429)
-        const now = Date.now();
-        if (ticketCache.data &&
-            ticketCache.instanceId === instance.id &&
-            ticketCache.startTime === startTime &&
-            (now - ticketCache.timestamp) < 120000) {
-            console.log("🚀 BeeZen: Retour du cache pour éviter 429");
-            return ticketCache.data;
-        }
-
         const cleanDomain = this.sanitizeDomain(instance.domain);
-        let allTickets = [];
-        let allUsers = [];
-        let brandsMap = {};
-        let currentStartTime = startTime;
-        let hasMore = true;
-        let pageCount = 0;
-        const maxPages = 10;
 
         try {
-            while (hasMore && pageCount < maxPages) {
-                const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${currentStartTime}&include=users,metric_sets,brands`;
+            // 1. Lancer la synchronisation Delta (Zendesk -> D1)
+            // On fait un appel sync au worker
+            console.log("🔄 BeeZen: Lancement de la synchronisation Delta...");
+            const syncResponse = await fetch(`${WORKER_URL}?action=sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instanceId: instance.id,
+                    domain: cleanDomain,
+                    email: instance.email,
+                    token: instance.token,
+                    startTime: startTime
+                })
+            });
 
-                const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Zendesk-Domain': cleanDomain,
-                        'X-Zendesk-Email': instance.email,
-                        'X-Zendesk-Token': instance.token
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    // Si 429, on tente d'être explicite pour l'utilisateur
-                    if (response.status === 429) {
-                        throw new Error("Limite API Zendesk atteinte (429). Veuillez patienter 1 minute avant d'actualiser.");
-                    }
-                    throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
-                }
-
-                const data = await response.json();
-                const tickets = data.tickets || [];
-                const users = data.users || [];
-
-                allUsers = [...allUsers, ...users];
-
-                (data.brands || []).forEach(b => {
-                    brandsMap[b.id] = b.name;
-                });
-
-                const metricsMap = (data.metric_sets || []).reduce((acc, m) => {
-                    acc[m.ticket_id] = m;
-                    return acc;
-                }, {});
-
-                const enriched = tickets.map(t => ({
-                    ...t,
-                    metrics: metricsMap[t.id] || null,
-                    brand_name: brandsMap[t.brand_id] || `Marque ${t.brand_id}`
-                }));
-
-                allTickets = [...allTickets, ...enriched];
-
-                if (data.count < 1000 || !data.end_time) {
-                    hasMore = false;
-                } else {
-                    currentStartTime = data.end_time;
-                    pageCount++;
-                }
+            if (!syncResponse.ok) {
+                console.error("⚠️ Erreur Sync:", await syncResponse.text());
             }
 
-            const uniqueTickets = Array.from(new Map(allTickets.map(t => [t.id, t])).values())
-                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            // 2. Récupérer les tickets consolidés depuis D1
+            console.log("📥 BeeZen: Récupération des données depuis D1...");
+            const dataResponse = await fetch(`${WORKER_URL}?action=get_tickets&instanceId=${instance.id}`);
 
-            const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+            if (!dataResponse.ok) {
+                throw new Error(`Erreur récupération D1: ${dataResponse.status}`);
+            }
 
-            const result = {
-                tickets: uniqueTickets,
-                users: uniqueUsers
+            const result = await dataResponse.json();
+
+            // Pour les utilisateurs, on garde le fetch direct ou on pourra l'ajouter au sync plus tard
+            // Pour l'instant on renvoie un tableau vide pour les users si on ne les sync pas en BDD
+            return {
+                tickets: result.tickets || [],
+                users: []
             };
-
-            // Mise à jour du cache
-            ticketCache.data = result;
-            ticketCache.timestamp = now;
-            ticketCache.instanceId = instance.id;
-            ticketCache.startTime = startTime;
-
-            return result;
         } catch (error) {
-            console.error("Erreur pagination BeeZen:", error);
+            console.error("Erreur Sync Engine BeeZen:", error);
             throw error;
         }
     },
