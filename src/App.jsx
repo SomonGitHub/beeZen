@@ -35,48 +35,41 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Load instances and tickets when session changes or tab switches
+  // 1. Charger les instances au démarrage
   useEffect(() => {
-    if (session) {
-      loadInstancesAndTickets()
+    const init = async () => {
+      if (session) {
+        const data = await DatabaseService.getInstances()
+        setInstances(data)
+        if (data.length > 0 && !activeInstanceId) {
+          setActiveInstanceId(data[0].id)
+        }
+      }
     }
+    init()
   }, [session])
 
+  // 2. Charger les tickets UNIQUEMENT quand l'instance active change
   useEffect(() => {
     if (session && activeInstanceId) {
       handleRefresh()
     }
   }, [activeInstanceId])
 
-  const loadInstancesAndTickets = async () => {
-    setRefreshing(true)
-    try {
-      const data = await DatabaseService.getInstances()
-      setInstances(data)
-
-      if (data.length > 0) {
-        const initialId = activeInstanceId || data[0].id
-        if (!activeInstanceId) setActiveInstanceId(initialId)
-
-        const instance = data.find(i => i.id === initialId) || data[0]
-        const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
-        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
-
-        setTickets(ticketData)
-        setUsers(userData)
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setRefreshing(false)
-    }
+  // Fonction légère pour recharger les instances (utile pour Settings)
+  const loadInstancesOnly = async () => {
+    const data = await DatabaseService.getInstances()
+    setInstances(data)
   }
 
   const handleRefresh = async () => {
     if (!activeInstanceId) return
     setRefreshing(true)
+    setError(null)
     try {
-      const instance = instances.find(i => i.id === activeInstanceId)
+      const instance = instances.find(i => i.id === activeInstanceId) || (await DatabaseService.getInstances()).find(i => i.id === activeInstanceId)
+      if (!instance) return;
+
       const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
       const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
 
@@ -111,7 +104,7 @@ function App() {
             error={error}
           />
         )}
-        {activeTab === 'settings' && <Settings onUpdate={loadInstancesAndTickets} />}
+        {activeTab === 'settings' && <Settings onUpdate={loadInstancesOnly} />}
         {activeTab === 'analytics' && <AIAnalytics tickets={tickets} />}
       </main>
     </div>
