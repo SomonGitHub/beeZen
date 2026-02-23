@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCcw, Filter, AlertTriangle, TrendingDown, TrendingUp, CheckCircle, Loader2, Globe } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Globe, Activity, BarChart3, CalendarDays } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
@@ -13,7 +13,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         }
     }, [tickets]);
 
-    // Agrégation dynamique des données réelles
+    // Agrégation pour le graphique de thèmes
     const metrics = ZendeskService.aggregateMetrics(tickets);
     const chartData = Object.keys(metrics).map(key => ({ name: key, volume: metrics[key] }));
 
@@ -83,41 +83,85 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 </div>
             )}
 
-            {/* Stats Summary */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Tickets (24h)</p>
-                    <p style={{ fontSize: '1.75rem', fontWeight: '800' }}>{tickets.length}</p>
-                </div>
+            {/* KPIs Rows */}
+            {(() => {
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+                const startOfWeek = Math.floor(now.getTime() / 1000) - (86400 * 7);
+                const startOfMonth = Math.floor(now.getTime() / 1000) - (86400 * 30);
 
-                {/* KPI FRT Mail */}
-                {(() => {
-                    const mailTickets = tickets.filter(t => t.via?.channel === 'email' && t.metrics?.reply_time_in_minutes?.calendar);
+                const getTicketsForRange = (start) => tickets.filter(t => (new Date(t.created_at).getTime() / 1000) >= start);
+
+                const tToday = getTicketsForRange(startOfToday);
+                const tWeek = getTicketsForRange(startOfWeek);
+                const tMonth = getTicketsForRange(startOfMonth);
+
+                const calculateFRT = (ticketList) => {
+                    const mailTickets = ticketList.filter(t => t.via?.channel === 'email' && t.metrics?.reply_time_in_minutes?.calendar);
                     const avgMinutes = mailTickets.length > 0
                         ? mailTickets.reduce((acc, t) => acc + t.metrics.reply_time_in_minutes.calendar, 0) / mailTickets.length
                         : 0;
-                    const avgHours = (avgMinutes / 60).toFixed(1);
+                    return mailTickets.length > 0 ? `${(avgMinutes / 60).toFixed(1)}h` : '--';
+                };
+
+                const renderKPIRow = (title, ticketList, icon, showGroupings = false) => {
+                    let channelGroup = {};
+                    let brandGroup = {};
+                    if (showGroupings) {
+                        ticketList.forEach(t => {
+                            const chan = t.via?.channel || 'autre';
+                            const brand = t.brand_name || 'Inconnu';
+                            channelGroup[chan] = (channelGroup[chan] || 0) + 1;
+                            brandGroup[brand] = (brandGroup[brand] || 0) + 1;
+                        });
+                    }
 
                     return (
-                        <div className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>FRT Mail (Moy. h)</p>
-                            <p style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--secondary)' }}>
-                                {mailTickets.length > 0 ? `${avgHours}h` : '--'}
-                            </p>
+                        <div style={{ marginBottom: '3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
+                                {icon}
+                                <h3 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                                    {title}
+                                </h3>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                                <div className="glass" style={{ padding: '1.25rem', textAlign: 'center' }}>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>Total Créés</p>
+                                    <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>{ticketList.length}</p>
+                                </div>
+                                {showGroupings && Object.entries(channelGroup).map(([chan, count]) => (
+                                    <div key={chan} className="glass" style={{ padding: '1.25rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>Canal: {chan}</p>
+                                        <p style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--secondary)' }}>{count}</p>
+                                    </div>
+                                ))}
+                                {showGroupings && Object.entries(brandGroup).map(([brand, count]) => (
+                                    <div key={brand} className="glass" style={{ padding: '1.25rem', textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>Marque: {brand}</p>
+                                        <p style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--primary)' }}>{count}</p>
+                                    </div>
+                                ))}
+                                <div className="glass" style={{ padding: '1.25rem', textAlign: 'center' }}>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.4rem' }}>FRT Mail (Moy)</p>
+                                    <p style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--secondary)' }}>{calculateFRT(ticketList)}</p>
+                                </div>
+                            </div>
                         </div>
                     );
-                })()}
+                };
 
-                {chartData.slice(0, 3).map((d, i) => (
-                    <div key={i} className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>{d.name}</p>
-                        <p style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>{d.volume}</p>
-                    </div>
-                ))}
-            </div>
+                return (
+                    <>
+                        {renderKPIRow("Aujourd'hui", tToday, <Activity size={20} color="var(--secondary)" />, true)}
+                        {renderKPIRow("Cette Semaine", tWeek, <BarChart3 size={20} color="var(--primary)" />)}
+                        {renderKPIRow("Ce Mois", tMonth, <CalendarDays size={20} color="var(--text-muted)" />)}
+                    </>
+                );
+            })()}
 
-            <div className="glass" style={{ padding: '1.5rem', height: '350px', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1.5rem' }}>Répartition des thèmes réels</h3>
+            {/* Graphique de répartition */}
+            <div className="glass" style={{ padding: '1.5rem', height: '350px', marginBottom: '2.5rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1.5rem' }}>Répartition des thèmes récursifs (30j)</h3>
                 {tickets.length > 0 ? (
                     <ResponsiveContainer width="100%" height="85%">
                         <AreaChart data={chartData}>
@@ -141,7 +185,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 )}
             </div>
 
-            {/* Integration de la Performance Agent */}
+            {/* Performance Agent */}
             <AgentPerformance tickets={tickets} users={users} />
         </div>
     );
