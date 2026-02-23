@@ -1,8 +1,6 @@
 /**
  * Cloudflare Worker Proxy & Sync Engine pour Bee2link Support Dashboard
- * 1. Gestion du Delta Sync (Zendesk -> D1)
- * 2. Persistance des tickets en base SQL D1
- * 3. Service des données au Frontend (D1 -> Dashboard)
+ * VERSION : Multi-page Sync Engine (Catch-up mode)
  */
 
 export default {
@@ -16,115 +14,118 @@ export default {
         if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
         const url = new URL(request.url);
-        const action = url.searchParams.get("action") || "proxy"; // "proxy", "sync", "get_tickets"
+        const action = url.searchParams.get("action") || "proxy";
 
-        // === LOGIQUE DE SYNCHRONISATION (DELTA) ===
-        if (action === "sync") {
-            return await handleSync(request, env, corsHeaders);
-        }
-
-        // === RÉCUPÉRATION DES DONNÉES (FRONTEND) ===
-        if (action === "get_tickets") {
-            return await handleGetTickets(request, env, corsHeaders);
-        }
-
-        // === PROXY CLASSIQUE (Pour compatibilité et OpenAI) ===
+        if (action === "sync") return await handleSync(request, env, corsHeaders);
+        if (action === "get_tickets") return await handleGetTickets(request, env, corsHeaders);
         return await handleProxy(request, env, corsHeaders);
     },
 };
 
 /**
- * Handle Sync: Récupère uniquement le Delta depuis Zendesk et met à jour D1
+ * Handle Sync: Récupère le Delta et boucle jusqu'à 5 pages (5000 tickets) par appel
  */
 async function handleSync(request, env, corsHeaders) {
-    const { instanceId, domain, email, token, startTime } = await request.json();
+    try {
+        const { instanceId, domain, email, token, startTime } = await request.json();
 
-    // 1. Récupérer le dernier sync_timestamp depuis D1
-    const syncStatus = await env.DB.prepare(
-        "SELECT last_sync_timestamp FROM sync_status WHERE instance_id = ?"
-    ).bind(instanceId).first();
+        // 1. Récupérer le dernier sync_timestamp
+        const syncStatus = await env.DB.prepare(
+            "SELECT last_sync_timestamp FROM sync_status WHERE instance_id = ?"
+        ).bind(instanceId).first();
 
-    // Si on a un startTime forcé (ex: 60 jours), on l'utilise, sinon on prend le dernier sync
-    let effectiveStartTime = syncStatus ? syncStatus.last_sync_timestamp : startTime;
+        let currentStartTime = syncStatus ? syncStatus.last_sync_timestamp : startTime;
+        let totalSynced = 0;
+        let pageCount = 0;
+        let hasMore = true;
+        const maxSyncPages = 10; // On synchronise jusqu'à 10 000 tickets par clic sur "Actualiser"
 
-    const targetUrl = `https://${domain}/api/v2/incremental/tickets.json?start_time=${effectiveStartTime}&include=users,metric_sets,brands`;
-    const auth = btoa(`${email}/token:${token}`);
+        const auth = btoa(`${email}/token:${token}`);
 
-    const response = await fetch(targetUrl, {
-        headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" }
-    });
+        while (hasMore && pageCount < maxSyncPages) {
+            const targetUrl = `https://${domain}/api/v2/incremental/tickets.json?start_time=${currentStartTime}&include=users,metric_sets,brands`;
 
-    if (!response.ok) return new Response(await response.text(), { status: response.status, headers: corsHeaders });
+            const response = await fetch(targetUrl, {
+                headers: { "Authorization": `Basic ${auth}`, "Content-Type": "application/json" }
+            });
 
-    const data = await response.json();
-    const tickets = data.tickets || [];
+            if (!response.ok) break;
 
-    // 2. Insérer/Update les tickets dans D1
-    if (tickets.length > 0) {
-        // Préparation du mapping des marques pour cette page
-        const brandsMap = (data.brands || []).reduce((acc, b) => { acc[b.id] = b.name; return acc; }, {});
-        const metricsMap = (data.metric_sets || []).reduce((acc, m) => { acc[m.ticket_id] = m; return acc; }, {});
+            const data = await response.json();
+            const tickets = data.tickets || [];
 
-        const statements = tickets.map(t => {
-            return env.DB.prepare(`
-                INSERT INTO tickets (id, instance_id, subject, status, created_at, updated_at, brand_name, channel, metrics_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET 
-                    status=excluded.status, 
-                    updated_at=excluded.updated_at, 
-                    metrics_json=excluded.metrics_json
-            `).bind(
-                t.id,
-                instanceId,
-                t.subject,
-                t.status,
-                t.created_at,
-                t.updated_at,
-                brandsMap[t.brand_id] || "Inconnu",
-                t.via?.channel || "autre",
-                JSON.stringify(metricsMap[t.id] || null)
-            );
-        });
+            if (tickets.length > 0) {
+                const brandsMap = (data.brands || []).reduce((acc, b) => { acc[b.id] = b.name; return acc; }, {});
+                const metricsMap = (data.metric_sets || []).reduce((acc, m) => { acc[m.ticket_id] = m; return acc; }, {});
 
-        // Exécution par lots
-        await env.DB.batch(statements);
+                const statements = tickets.map(t => {
+                    return env.DB.prepare(`
+                        INSERT INTO tickets (id, instance_id, subject, status, created_at, updated_at, brand_name, channel, metrics_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET 
+                            status=excluded.status, 
+                            updated_at=excluded.updated_at, 
+                            metrics_json=excluded.metrics_json
+                    `).bind(
+                        t.id,
+                        instanceId,
+                        t.subject,
+                        t.status,
+                        t.created_at,
+                        t.updated_at,
+                        brandsMap[t.brand_id] || "Inconnu",
+                        t.via?.channel || "autre",
+                        JSON.stringify(metricsMap[t.id] || null)
+                    );
+                });
+
+                await env.DB.batch(statements);
+                totalSynced += tickets.length;
+            }
+
+            if (data.count < 1000 || !data.end_time) {
+                hasMore = false;
+            } else {
+                currentStartTime = data.end_time;
+                pageCount++;
+
+                // Mettre à jour le timestamp au fur et à mesure pour ne pas tout perdre si timeout
+                await env.DB.prepare(`
+                    INSERT INTO sync_status (instance_id, last_sync_timestamp, last_sync_date, ticket_count)
+                    VALUES (?, ?, ?, (SELECT count(*) FROM tickets WHERE instance_id = ?))
+                    ON CONFLICT(instance_id) DO UPDATE SET 
+                        last_sync_timestamp=excluded.last_sync_timestamp,
+                        last_sync_date=excluded.last_sync_date,
+                        ticket_count=excluded.ticket_count
+                `).bind(instanceId, data.end_time, new Date().toISOString(), instanceId).run();
+            }
+        }
+
+        return new Response(JSON.stringify({
+            success: true,
+            synced: totalSynced,
+            hasMore: hasMore,
+            last_timestamp: currentStartTime
+        }), { headers: corsHeaders });
+
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
     }
-
-    // 3. Mettre à jour le sync_status
-    if (data.end_time) {
-        await env.DB.prepare(`
-            INSERT INTO sync_status (instance_id, last_sync_timestamp, last_sync_date, ticket_count)
-            VALUES (?, ?, ?, (SELECT count(*) FROM tickets WHERE instance_id = ?))
-            ON CONFLICT(instance_id) DO UPDATE SET 
-                last_sync_timestamp=excluded.last_sync_timestamp,
-                last_sync_date=excluded.last_sync_date,
-                ticket_count=excluded.ticket_count
-        `).bind(instanceId, data.end_time, new Date().toISOString(), instanceId).run();
-    }
-
-    return new Response(JSON.stringify({
-        success: true,
-        count: tickets.length,
-        hasMore: data.count === 1000
-    }), { headers: corsHeaders });
 }
 
 /**
- * Handle Get Tickets: Renvoie les données depuis D1 au Frontend
+ * Handle Get Tickets
  */
 async function handleGetTickets(request, env, corsHeaders) {
     const url = new URL(request.url);
     const instanceId = url.searchParams.get("instanceId");
-    const period = url.searchParams.get("period") || "30d"; // non utilisé ici car on filtre côté front, mais utile pour optimisation future
 
     if (!instanceId) return new Response("Missing instanceId", { status: 400, headers: corsHeaders });
 
-    // On récupère les 3000 derniers tickets pour cette instance
     const { results } = await env.DB.prepare(
-        "SELECT * FROM tickets WHERE instance_id = ? ORDER BY created_at DESC LIMIT 3000"
+        "SELECT * FROM tickets WHERE instance_id = ? ORDER BY created_at DESC LIMIT 5000"
     ).bind(instanceId).all();
 
-    // Reformatage pour le frontend (parsing du JSON des metrics)
     const formatted = results.map(t => ({
         ...t,
         metrics: t.metrics_json ? JSON.parse(t.metrics_json) : null
@@ -134,7 +135,7 @@ async function handleGetTickets(request, env, corsHeaders) {
 }
 
 /**
- * Handle Proxy: Pour OpenAI et autres appels directs
+ * Handle Proxy
  */
 async function handleProxy(request, env, corsHeaders) {
     const url = new URL(request.url);
