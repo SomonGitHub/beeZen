@@ -78,7 +78,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     if (instances.length === 0) {
         return (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}>Bienvenue sur BeeZen</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}>Bienvenue sur B2L Support Dashboard</h2>
                 <div className="glass" style={{ padding: '3rem', maxWidth: '600px', margin: '0 auto' }}>
                     <AlertTriangle size={48} color="var(--warning)" style={{ marginBottom: '1.5rem' }} />
                     <h3 style={{ marginBottom: '1rem' }}>Aucune instance Zendesk configurée</h3>
