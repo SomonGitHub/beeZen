@@ -1,77 +1,76 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { User, TrendingUp, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Users } from 'lucide-react';
 
-const data = [
-    { name: 'Alice', solved: 45, frt: 12, rating: 4.8 },
-    { name: 'Bob', solved: 38, frt: 15, rating: 4.5 },
-    { name: 'Charlie', solved: 52, frt: 10, rating: 4.9 },
-    { name: 'David', solved: 30, frt: 22, rating: 4.2 },
-    { name: 'Eve', solved: 41, frt: 14, rating: 4.7 },
-];
+const AgentPerformance = ({ tickets, users = [] }) => {
+    // Création d'un dictionnaire ID -> Nom pour un accès rapide
+    const userMap = users.reduce((acc, user) => {
+        acc[user.id] = user.name;
+        return acc;
+    }, {});
 
-const AgentPerformance = () => {
+    // Agrégation des tickets par Agent
+    const agentData = tickets.reduce((acc, ticket) => {
+        const id = ticket.assignee_id || 'Non assigné';
+        if (!acc[id]) {
+            acc[id] = {
+                id,
+                name: userMap[id] || (id === 'Non assigné' ? 'Non assigné' : `Agent ${id}`),
+                solved: 0
+            };
+        }
+        // On compte comme "résolu" si le statut est 'solved' ou 'closed'
+        if (ticket.status === 'solved' || ticket.status === 'closed') {
+            acc[id].solved += 1;
+        }
+        return acc;
+    }, {});
+
+    const chartData = Object.values(agentData)
+        .sort((a, b) => b.solved - a.solved)
+        .slice(0, 10); // On peut en afficher un peu plus si on a de la place
+
+    if (tickets.length === 0) return null;
+
     return (
-        <div style={{ padding: '2rem' }}>
-            <header style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Performance des Agents</h2>
-                <p style={{ color: 'var(--text-muted)' }}>Comparaison de l'efficacité et de la satisfaction</p>
-            </header>
+        <div style={{ marginTop: '3rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Users size={20} color="var(--primary)" /> Performance des Agents (Tickets Résolus)
+            </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                {/* Main Chart */}
-                <div className="glass" style={{ padding: '2rem', height: '400px' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <TrendingUp size={18} color="var(--primary)" /> Tickets Résolus vs Temps de Réponse (min)
-                    </h3>
-                    <ResponsiveContainer width="100%" height="85%">
-                        <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                            <XAxis dataKey="name" stroke="var(--text-muted)" />
-                            <YAxis stroke="var(--text-muted)" />
-                            <Tooltip
-                                contentStyle={{ background: 'rgba(15, 23, 42, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '8px' }}
-                                itemStyle={{ color: '#fff' }}
-                            />
-                            <Legend />
-                            <Bar dataKey="solved" name="Tickets Résolus" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="frt" name="FRT (min)" fill="var(--secondary)" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-
-                {/* Top Performer Card */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
-                        <div style={{ width: '64px', height: '64px', background: 'var(--primary-glow)', borderRadius: '50%', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', border: '2px solid var(--primary)' }}>
-                            <User size={32} />
-                        </div>
-                        <h4 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Charlie</h4>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>Meilleurs résultats de la semaine</p>
-                        <div style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
-                            <div>
-                                <p style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--primary)' }}>52</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Résolus</p>
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--success)' }}>4.9</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CSAT</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="glass" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={16} color="var(--secondary)" /> Alertes Temps de Réponse
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <div style={{ padding: '10px', background: 'rgba(239, 68, 68, 0.1)', borderLeft: '3px solid var(--danger)', borderRadius: '4px' }}>
-                                <p style={{ fontSize: '0.8125rem', fontWeight: '600' }}>David : FRT &gt; 20min</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Moyenne critique détectée</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div className="glass" style={{ padding: '2rem', height: '400px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={chartData}
+                        layout="vertical"
+                        margin={{ left: 100, right: 40, top: 20, bottom: 20 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                        <XAxis type="number" stroke="var(--text-muted)" fontSize={12} title="Tickets Résolus" />
+                        <YAxis
+                            dataKey="name"
+                            type="category"
+                            stroke="var(--text-main)"
+                            fontSize={12}
+                            width={150}
+                            tick={{ fill: 'var(--text-main)' }}
+                        />
+                        <Tooltip
+                            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                            contentStyle={{
+                                background: 'rgba(15, 23, 42, 0.95)',
+                                border: '1px solid var(--border-glass)',
+                                borderRadius: '8px',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                            }}
+                        />
+                        <Bar dataKey="solved" name="Résolus" radius={[0, 4, 4, 0]} barSize={25}>
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={index === 0 ? 'var(--primary)' : 'rgba(255,183,0,0.6)'} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
             </div>
         </div>
     );

@@ -4,7 +4,6 @@ import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
 import Login from './components/Login'
 import Settings from './components/Settings'
-import AgentPerformance from './components/AgentPerformance'
 import AIAnalytics from './components/AIAnalytics'
 import { supabase } from './lib/supabase'
 import { DatabaseService } from './services/db'
@@ -19,6 +18,7 @@ function App() {
   const [instances, setInstances] = useState([])
   const [activeInstanceId, setActiveInstanceId] = useState(null)
   const [tickets, setTickets] = useState([])
+  const [users, setUsers] = useState([])
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
 
@@ -54,7 +54,7 @@ function App() {
 
         const instance = data.find(i => i.id === initialId) || data[0]
         const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
-        const ticketData = await ZendeskService.fetchTickets(instance, oneDayAgo)
+        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, oneDayAgo)
 
         // Filtre : Uniquement les tickets CRÉÉS dans les dernières 24h
         const createdInLast24h = ticketData.filter(t => {
@@ -63,6 +63,7 @@ function App() {
         })
 
         setTickets(createdInLast24h)
+        setUsers(userData)
       }
     } catch (err) {
       setError(err.message)
@@ -77,7 +78,7 @@ function App() {
     try {
       const instance = instances.find(i => i.id === activeInstanceId)
       const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
-      const ticketData = await ZendeskService.fetchTickets(instance, oneDayAgo)
+      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, oneDayAgo)
 
       const createdInLast24h = ticketData.filter(t => {
         const createdAt = new Date(t.created_at).getTime() / 1000
@@ -85,6 +86,7 @@ function App() {
       })
 
       setTickets(createdInLast24h)
+      setUsers(userData)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -108,6 +110,7 @@ function App() {
             activeInstanceId={activeInstanceId}
             setActiveInstanceId={setActiveInstanceId}
             tickets={tickets}
+            users={users}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             error={error}
@@ -115,7 +118,6 @@ function App() {
         )}
         {activeTab === 'settings' && <Settings onUpdate={loadInstancesAndTickets} />}
         {activeTab === 'analytics' && <AIAnalytics tickets={tickets} />}
-        {activeTab === 'agents' && <AgentPerformance tickets={tickets} />}
       </main>
     </div>
   )

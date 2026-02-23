@@ -14,7 +14,6 @@ const Sidebar = ({ activeTab, onTabChange }) => {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     { id: 'analytics', icon: BarChart3, label: 'Analyses IA' },
-    { id: 'agents', icon: Users, label: 'Performance Agents' },
     { id: 'settings', icon: Settings, label: 'Paramètres' },
   ];
 

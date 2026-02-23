@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCcw, Filter, AlertTriangle, TrendingDown, TrendingUp, CheckCircle, Loader2, Globe } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
+import AgentPerformance from './AgentPerformance';
 
-const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, refreshing, onRefresh, error }) => {
+const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, users, refreshing, onRefresh, error }) => {
     const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString());
 
     useEffect(() => {
@@ -120,6 +121,9 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                     </div>
                 )}
             </div>
+
+            {/* Integration de la Performance Agent */}
+            <AgentPerformance tickets={tickets} users={users} />
         </div>
     );
 };

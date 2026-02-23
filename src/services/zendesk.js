@@ -27,7 +27,8 @@ export const ZendeskService = {
         if (!instance || !instance.domain || !instance.token) return [];
 
         const cleanDomain = this.sanitizeDomain(instance.domain);
-        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}`;
+        // On ajoute 'include=users' pour récupérer les noms des agents (sideloading)
+        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users`;
 
         try {
             const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
@@ -57,7 +58,10 @@ export const ZendeskService = {
             }
 
             const data = await response.json();
-            return data.tickets || [];
+            return {
+                tickets: data.tickets || [],
+                users: data.users || []
+            };
         } catch (error) {
             console.error("Erreur via Proxy BeeZen:", error);
             throw error;
