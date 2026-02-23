@@ -4,5 +4,5 @@ compatibility_date = "2024-02-23"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "beezen-db"
-database_id = "votre-id-ici" # L'utilisateur devra le remplir ou je lui demanderai
+database_name = "beezen"
+database_id = "0158f1de-49c4-49ac-be30-5f2253a467df"
