@@ -84,11 +84,30 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             )}
 
             {/* Stats Summary */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                 <div className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Tickets (24h)</p>
                     <p style={{ fontSize: '1.75rem', fontWeight: '800' }}>{tickets.length}</p>
                 </div>
+
+                {/* KPI FRT Mail */}
+                {(() => {
+                    const mailTickets = tickets.filter(t => t.via?.channel === 'email' && t.metrics?.reply_time_in_minutes?.calendar);
+                    const avgMinutes = mailTickets.length > 0
+                        ? mailTickets.reduce((acc, t) => acc + t.metrics.reply_time_in_minutes.calendar, 0) / mailTickets.length
+                        : 0;
+                    const avgHours = (avgMinutes / 60).toFixed(1);
+
+                    return (
+                        <div className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>FRT Mail (Moy. h)</p>
+                            <p style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--secondary)' }}>
+                                {mailTickets.length > 0 ? `${avgHours}h` : '--'}
+                            </p>
+                        </div>
+                    );
+                })()}
+
                 {chartData.slice(0, 3).map((d, i) => (
                     <div key={i} className="glass" style={{ padding: '1.5rem', textAlign: 'center' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>{d.name}</p>

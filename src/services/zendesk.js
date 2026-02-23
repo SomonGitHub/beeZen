@@ -27,8 +27,8 @@ export const ZendeskService = {
         if (!instance || !instance.domain || !instance.token) return [];
 
         const cleanDomain = this.sanitizeDomain(instance.domain);
-        // On ajoute 'include=users' pour récupérer les noms des agents (sideloading)
-        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users`;
+        // On ajoute 'users' et 'metric_sets' pour les noms d'agents et le temps de réponse
+        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users,metric_sets`;
 
         try {
             const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
@@ -58,8 +58,21 @@ export const ZendeskService = {
             }
 
             const data = await response.json();
+
+            // On mappe les metrics par ticket_id pour un accès facile
+            const metricsMap = (data.metric_sets || []).reduce((acc, m) => {
+                acc[m.ticket_id] = m;
+                return acc;
+            }, {});
+
+            // On enrichit les tickets avec leurs metrics
+            const enrichedTickets = (data.tickets || []).map(t => ({
+                ...t,
+                metrics: metricsMap[t.id] || null
+            }));
+
             return {
-                tickets: data.tickets || [],
+                tickets: enrichedTickets,
                 users: data.users || []
             };
         } catch (error) {
