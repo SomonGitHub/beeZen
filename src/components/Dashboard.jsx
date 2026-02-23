@@ -147,7 +147,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
             {/* Dynamic KPIs Display */}
             <div style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                     <div className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>Total Créés</p>
                         <p style={{ fontSize: '2.1rem', fontWeight: '800' }}>{filteredTickets.length}</p>
