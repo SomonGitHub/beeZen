@@ -50,11 +50,9 @@ export const ZendeskService = {
 
             const result = await dataResponse.json();
 
-            // Pour les utilisateurs, on garde le fetch direct ou on pourra l'ajouter au sync plus tard
-            // Pour l'instant on renvoie un tableau vide pour les users si on ne les sync pas en BDD
             return {
                 tickets: result.tickets || [],
-                users: []
+                users: result.users || []
             };
         } catch (error) {
             console.error("Erreur Sync Engine BeeZen:", error);
