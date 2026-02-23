@@ -31,8 +31,8 @@ export const AIService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_KEY}`,
-                    'X-BeeZen-AI': 'true' // Header custom pour notre proxy si besoin
+                    'X-OpenAI-Key': OPENAI_KEY,
+                    'X-BeeZen-AI': 'true'
                 },
                 body: JSON.stringify({
                     model: "gpt-4o-mini",

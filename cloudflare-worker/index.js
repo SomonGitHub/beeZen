@@ -6,11 +6,11 @@
 
 export default {
     async fetch(request, env, ctx) {
-        // Configuration CORS
+        // Configuration CORS étendue
         const corsHeaders = {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, X-Zendesk-Domain, X-Zendesk-Email, X-Zendesk-Token",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
         };
 
         // Gestion du preflight OPTIONS
@@ -25,31 +25,42 @@ export default {
             return new Response("Missing target URL", { status: 400, headers: corsHeaders });
         }
 
-        // Récupération des credentials via headers (plus propre que dans l'URL)
-        const domain = request.headers.get("X-Zendesk-Domain");
-        const email = request.headers.get("X-Zendesk-Email");
-        const token = request.headers.get("X-Zendesk-Token");
+        // Préparation des headers pour l'appel cible
+        const headers = new Headers();
+        headers.set("Content-Type", "application/json");
 
-        if (!domain || !email || !token) {
-            return new Response("Missing Zendesk Credentials", { status: 401, headers: corsHeaders });
+        // Logique spécifique : ZENDESK
+        const zdDomain = request.headers.get("X-Zendesk-Domain");
+        const zdEmail = request.headers.get("X-Zendesk-Email");
+        const zdToken = request.headers.get("X-Zendesk-Token");
+
+        if (zdDomain && zdEmail && zdToken) {
+            const auth = btoa(`${zdEmail}/token:${zdToken}`);
+            headers.set("Authorization", `Basic ${auth}`);
         }
 
-        // Préparation de l'auth Basic
-        const auth = btoa(`${email}/token:${token}`);
+        // Logique spécifique : OPENAI
+        const aiKey = request.headers.get("X-OpenAI-Key");
+        if (aiKey) {
+            headers.set("Authorization", `Bearer ${aiKey}`);
+        }
+
+        // Si c'est un POST, on récupère le body
+        let body = null;
+        if (request.method === "POST") {
+            body = await request.text();
+        }
 
         try {
             const response = await fetch(targetUrl, {
                 method: request.method,
-                headers: {
-                    "Authorization": `Basic ${auth}`,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                }
+                headers: headers,
+                body: body
             });
 
-            const body = await response.text();
+            const responseBody = await response.text();
 
-            return new Response(body, {
+            return new Response(responseBody, {
                 status: response.status,
                 headers: {
                     ...corsHeaders,

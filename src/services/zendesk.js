@@ -27,8 +27,8 @@ export const ZendeskService = {
         if (!instance || !instance.domain || !instance.token) return [];
 
         const cleanDomain = this.sanitizeDomain(instance.domain);
-        // On ajoute 'users' et 'metric_sets' pour les noms d'agents et le temps de réponse
-        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users,metric_sets`;
+        // On ajoute 'users', 'metric_sets' et 'brands' pour une analyse complète
+        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users,metric_sets,brands`;
 
         try {
             const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
@@ -65,10 +65,17 @@ export const ZendeskService = {
                 return acc;
             }, {});
 
-            // On enrichit les tickets avec leurs metrics
+            // On mappe les marques par ID
+            const brandsMap = (data.brands || []).reduce((acc, b) => {
+                acc[b.id] = b.name;
+                return acc;
+            }, {});
+
+            // On enrichit les tickets avec leurs metrics et marques
             const enrichedTickets = (data.tickets || []).map(t => ({
                 ...t,
-                metrics: metricsMap[t.id] || null
+                metrics: metricsMap[t.id] || null,
+                brand_name: brandsMap[t.brand_id] || `Marque ${t.brand_id}`
             }));
 
             return {

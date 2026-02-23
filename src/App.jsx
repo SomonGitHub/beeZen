@@ -53,16 +53,10 @@ function App() {
         if (!activeInstanceId) setActiveInstanceId(initialId)
 
         const instance = data.find(i => i.id === initialId) || data[0]
-        const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
-        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, oneDayAgo)
+        const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 30)
+        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, thirtyDaysAgo)
 
-        // Filtre : Uniquement les tickets CRÉÉS dans les dernières 24h
-        const createdInLast24h = ticketData.filter(t => {
-          const createdAt = new Date(t.created_at).getTime() / 1000
-          return createdAt >= oneDayAgo
-        })
-
-        setTickets(createdInLast24h)
+        setTickets(ticketData)
         setUsers(userData)
       }
     } catch (err) {
@@ -77,15 +71,10 @@ function App() {
     setRefreshing(true)
     try {
       const instance = instances.find(i => i.id === activeInstanceId)
-      const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
-      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, oneDayAgo)
+      const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 30)
+      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, thirtyDaysAgo)
 
-      const createdInLast24h = ticketData.filter(t => {
-        const createdAt = new Date(t.created_at).getTime() / 1000
-        return createdAt >= oneDayAgo
-      })
-
-      setTickets(createdInLast24h)
+      setTickets(ticketData)
       setUsers(userData)
     } catch (err) {
       setError(err.message)
