@@ -1,53 +1,44 @@
 /**
- * Service pour la persistance des données (Cloudflare D1 / Supabase)
+ * Service pour la persistance des données (Partage Global)
  */
 import { supabase } from '../lib/supabase';
 
 export const DatabaseService = {
     /**
-     * Récupère les instances enregistrées pour l'utilisateur actuel
+     * Récupère TOUTES les instances (Partagées entre utilisateurs)
      */
     async getInstances() {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
-
-        // Note: Pour Cloudflare D1, on ferait un fetch vers un Worker ici.
-        // Pour l'instant, si vous utilisez la BDD Supabase (car déjà connectée), 
-        // l'enregistrement sera immédiat.
         const { data, error } = await supabase
             .from('instances')
             .select('*')
-            .eq('user_id', user.id);
+            .order('created_at', { ascending: true });
 
         if (error) {
             console.error("Erreur lors de la récupération des instances:", error);
-            // Fallback localstorage pour que vous voyiez que ça fonctionne immédiatement en local
-            const local = localStorage.getItem(`instances_${user.id}`);
+            // Fallback localStorage
+            const local = localStorage.getItem('beezen_global_instances');
             return local ? JSON.parse(local) : [];
         }
         return data || [];
     },
 
     /**
-     * Sauvegarde une nouvelle instance
+     * Sauvegarde une instance (Visible par tous)
      */
     async saveInstance(instance) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const instanceData = { ...instance, created_by: user?.id };
 
-        const instanceWithUser = { ...instance, user_id: user.id };
-
-        // Tentative de sauvegarde persistante (Supabase / Future D1)
         const { data, error } = await supabase
             .from('instances')
-            .insert([instanceWithUser])
+            .insert([instanceData])
             .select();
 
         if (error) {
-            console.warn("Table 'instances' non trouvée dans Supabase, sauvegarde locale activée.");
+            console.warn("Erreur Supabase, sauvegarde locale de secours.");
             const current = await this.getInstances();
-            const updated = [...current, { ...instanceWithUser, id: Date.now() }];
-            localStorage.setItem(`instances_${user.id}`, JSON.stringify(updated));
+            const updated = [...current, { ...instanceData, id: Date.now() }];
+            localStorage.setItem('beezen_global_instances', JSON.stringify(updated));
             return updated;
         }
 
@@ -58,9 +49,6 @@ export const DatabaseService = {
      * Supprime une instance
      */
     async deleteInstance(id) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         const { error } = await supabase
             .from('instances')
             .delete()
@@ -69,7 +57,7 @@ export const DatabaseService = {
         if (error) {
             const current = await this.getInstances();
             const updated = current.filter(i => i.id !== id);
-            localStorage.setItem(`instances_${user.id}`, JSON.stringify(updated));
+            localStorage.setItem('beezen_global_instances', JSON.stringify(updated));
         }
     }
 };

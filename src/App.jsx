@@ -55,7 +55,14 @@ function App() {
         const instance = data.find(i => i.id === initialId) || data[0]
         const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
         const ticketData = await ZendeskService.fetchTickets(instance, oneDayAgo)
-        setTickets(ticketData)
+
+        // Filtre : Uniquement les tickets CRÉÉS dans les dernières 24h
+        const createdInLast24h = ticketData.filter(t => {
+          const createdAt = new Date(t.created_at).getTime() / 1000
+          return createdAt >= oneDayAgo
+        })
+
+        setTickets(createdInLast24h)
       }
     } catch (err) {
       setError(err.message)
@@ -71,7 +78,13 @@ function App() {
       const instance = instances.find(i => i.id === activeInstanceId)
       const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
       const ticketData = await ZendeskService.fetchTickets(instance, oneDayAgo)
-      setTickets(ticketData)
+
+      const createdInLast24h = ticketData.filter(t => {
+        const createdAt = new Date(t.created_at).getTime() / 1000
+        return createdAt >= oneDayAgo
+      })
+
+      setTickets(createdInLast24h)
     } catch (err) {
       setError(err.message)
     } finally {
