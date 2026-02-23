@@ -11,9 +11,11 @@ export const ZendeskService = {
      */
     sanitizeDomain(domain) {
         if (!domain) return "";
+        // On enlève TOUS les "http://" ou "https://" quel que soit leur nombre
         return domain
-            .replace(/^https?:\/\//, '') // Enlever http:// ou https://
-            .replace(/\/$/, '');        // Enlever le slash final
+            .replace(/https?:\/\//gi, '')
+            .replace(/\/+$/, '')          // Enlever les slashes de fin
+            .trim();
     },
 
     /**
