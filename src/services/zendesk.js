@@ -90,9 +90,16 @@ export const ZendeskService = {
                 }
             }
 
+            // Déduplication des tickets par ID (au cas où un ticket apparaît sur 2 pages)
+            const uniqueTickets = Array.from(new Map(allTickets.map(t => [t.id, t])).values())
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            // Déduplication des utilisateurs par ID
+            const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+
             return {
-                tickets: allTickets,
-                users: allUsers
+                tickets: uniqueTickets,
+                users: uniqueUsers
             };
         } catch (error) {
             console.error("Erreur pagination BeeZen:", error);
