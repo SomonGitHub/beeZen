@@ -11,11 +11,11 @@ export const ZendeskService = {
      */
     sanitizeDomain(domain) {
         if (!domain) return "";
-        // On enlève TOUS les "http://" ou "https://" quel que soit leur nombre
-        return domain
-            .replace(/https?:\/\//gi, '')
-            .replace(/\/+$/, '')          // Enlever les slashes de fin
-            .trim();
+        // On enlève TOUT ce qui ressemble à un protocole (http, https, ://) répétitif
+        let clean = domain.replace(/https?:\/\//gi, '').replace(/:\/\//g, '');
+        // On enlève les slashes de début et de fin
+        clean = clean.replace(/^\/+|\/+$/g, '');
+        return clean.trim();
     },
 
     /**
