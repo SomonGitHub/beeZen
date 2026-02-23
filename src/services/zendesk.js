@@ -24,66 +24,78 @@ export const ZendeskService = {
      * @param {number} startTime - Timestamp UNIX de début
      */
     async fetchTickets(instance, startTime = 0) {
-        if (!instance || !instance.domain || !instance.token) return [];
+        if (!instance || !instance.domain || !instance.token) return { tickets: [], users: [] };
 
         const cleanDomain = this.sanitizeDomain(instance.domain);
-        // On ajoute 'users', 'metric_sets' et 'brands' pour une analyse complète
-        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}&include=users,metric_sets,brands`;
+        let allTickets = [];
+        let allUsers = [];
+        let brandsMap = {};
+        let currentStartTime = startTime;
+        let hasMore = true;
+        let pageCount = 0;
+        const maxPages = 3; // Limite à 3000 tickets pour éviter les timeouts et la surcharge mémoire
 
         try {
-            const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Zendesk-Domain': cleanDomain,
-                    'X-Zendesk-Email': instance.email,
-                    'X-Zendesk-Token': instance.token
-                }
-            });
+            while (hasMore && pageCount < maxPages) {
+                const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${currentStartTime}&include=users,metric_sets,brands`;
 
-            const contentType = response.headers.get("content-type");
-
-            if (!response.ok) {
-                // Tentative de lecture du JSON, sinon fallback sur le texte (pour les erreurs Cloudflare 1003 etc)
-                if (contentType && contentType.includes("application/json")) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Erreur Proxy: ${response.statusText}`);
-                } else {
-                    const errorText = await response.text();
-                    if (errorText.includes("error code: 1003")) {
-                        throw new Error("ERREUR CLOUDFLARE 1003 : Le Worker refuse l'accès. Vérifiez que l'URL cible est correcte.");
+                const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Zendesk-Domain': cleanDomain,
+                        'X-Zendesk-Email': instance.email,
+                        'X-Zendesk-Token': instance.token
                     }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
                     throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
+
+                const data = await response.json();
+                const tickets = data.tickets || [];
+                const users = data.users || [];
+
+                // On accumule les utilisateurs (on dédoublonnera à la fin si nécessaire)
+                allUsers = [...allUsers, ...users];
+
+                // On mappe les marques (disponibles sur chaque page)
+                (data.brands || []).forEach(b => {
+                    brandsMap[b.id] = b.name;
+                });
+
+                // On mappe les metrics de cette page
+                const metricsMap = (data.metric_sets || []).reduce((acc, m) => {
+                    acc[m.ticket_id] = m;
+                    return acc;
+                }, {});
+
+                // On enrichit les tickets de cette page
+                const enriched = tickets.map(t => ({
+                    ...t,
+                    metrics: metricsMap[t.id] || null,
+                    brand_name: brandsMap[t.brand_id] || `Marque ${t.brand_id}`
+                }));
+
+                allTickets = [...allTickets, ...enriched];
+
+                // Pagination Incremental : on regarde count et on met à jour start_time
+                if (data.count < 1000 || !data.end_time) {
+                    hasMore = false;
+                } else {
+                    currentStartTime = data.end_time;
+                    pageCount++;
                 }
             }
 
-            const data = await response.json();
-
-            // On mappe les metrics par ticket_id pour un accès facile
-            const metricsMap = (data.metric_sets || []).reduce((acc, m) => {
-                acc[m.ticket_id] = m;
-                return acc;
-            }, {});
-
-            // On mappe les marques par ID
-            const brandsMap = (data.brands || []).reduce((acc, b) => {
-                acc[b.id] = b.name;
-                return acc;
-            }, {});
-
-            // On enrichit les tickets avec leurs metrics et marques
-            const enrichedTickets = (data.tickets || []).map(t => ({
-                ...t,
-                metrics: metricsMap[t.id] || null,
-                brand_name: brandsMap[t.brand_id] || `Marque ${t.brand_id}`
-            }));
-
             return {
-                tickets: enrichedTickets,
-                users: data.users || []
+                tickets: allTickets,
+                users: allUsers
             };
         } catch (error) {
-            console.error("Erreur via Proxy BeeZen:", error);
+            console.error("Erreur pagination BeeZen:", error);
             throw error;
         }
     },
