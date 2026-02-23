@@ -1,0 +1,6 @@
+name = "beezen-proxy"
+main = "index.js"
+compatibility_date = "2024-02-23"
+
+[vars]
+# Vous pourrez ajouter des variables globales ici si besoin
