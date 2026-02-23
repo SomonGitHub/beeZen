@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
@@ -14,27 +14,66 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         }
     }, [tickets]);
 
-    // Filtrage des tickets en fonction de la période sélectionnée
-    const getFilteredTickets = () => {
+    // Calcul des périodes (Actuelle vs Précédente)
+    const getPeriods = () => {
         const now = new Date();
-        let startTime;
+        const nowUnix = Math.floor(now.getTime() / 1000);
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+
+        let current = { start: 0, end: nowUnix };
+        let previous = { start: 0, end: 0 };
 
         if (timeFilter === 'today') {
-            startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+            current.start = todayStart;
+            // Monday rule: if today is Monday (1), compare with Friday (3 days ago)
+            const isMonday = now.getDay() === 1;
+            const daysToSubtract = isMonday ? 3 : 1;
+            previous.start = todayStart - (86400 * daysToSubtract);
+            previous.end = todayStart - (86400 * (daysToSubtract - 1));
         } else if (timeFilter === '7d') {
-            startTime = Math.floor(now.getTime() / 1000) - (86400 * 7);
+            current.start = nowUnix - (86400 * 7);
+            previous.start = current.start - (86400 * 7);
+            previous.end = current.start;
         } else {
-            startTime = Math.floor(now.getTime() / 1000) - (86400 * 30);
+            current.start = nowUnix - (86400 * 30);
+            previous.start = current.start - (86400 * 30);
+            previous.end = current.start;
         }
-
-        return tickets.filter(t => (new Date(t.created_at).getTime() / 1000) >= startTime);
+        return { current, previous };
     };
 
-    const filteredTickets = getFilteredTickets();
+    const { current, previous } = getPeriods();
 
-    // Agrégation pour le graphique de thèmes basée sur les tickets filtrés
-    const metrics = ZendeskService.aggregateMetrics(filteredTickets);
-    const chartData = Object.keys(metrics).map(key => ({ name: key, volume: metrics[key] }));
+    // Filtrage des tickets
+    const currentTickets = tickets.filter(t => {
+        const ts = new Date(t.created_at).getTime() / 1000;
+        return ts >= current.start && ts <= current.end;
+    });
+
+    const previousTickets = tickets.filter(t => {
+        const ts = new Date(t.created_at).getTime() / 1000;
+        return ts >= previous.start && ts <= previous.end;
+    });
+
+    // Agrégation pour les KPIs (Période Actuelle)
+    const aggregateData = (ticketList) => {
+        let channels = {};
+        let brands = {};
+        ticketList.forEach(t => {
+            const chan = t.via?.channel || 'autre';
+            const brand = t.brand_name || 'Inconnu';
+            channels[chan] = (channels[chan] || 0) + 1;
+            brands[brand] = (brands[brand] || 0) + 1;
+        });
+        return { total: ticketList.length, channels, brands };
+    };
+
+    const currentStats = aggregateData(currentTickets);
+    const previousStats = aggregateData(previousTickets);
+
+    // Agrégation pour le graphique (basée sur période actuelle)
+    const chartMetrics = ZendeskService.aggregateMetrics(currentTickets);
+    const chartData = Object.keys(chartMetrics).map(key => ({ name: key, volume: chartMetrics[key] }));
 
     if (instances.length === 0) {
         return (
@@ -51,16 +90,32 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         );
     }
 
+    const renderEvolution = (curr, prev) => {
+        if (!prev || prev === 0) return null;
+        const percent = ((curr - prev) / prev) * 100;
+        if (Math.abs(percent) < 1) return null;
 
-    // Calcul des groupements pour les KPIs
-    let channelGroup = {};
-    let brandGroup = {};
-    filteredTickets.forEach(t => {
-        const chan = t.via?.channel || 'autre';
-        const brand = t.brand_name || 'Inconnu';
-        channelGroup[chan] = (channelGroup[chan] || 0) + 1;
-        brandGroup[brand] = (brandGroup[brand] || 0) + 1;
-    });
+        const isIncrease = percent > 0;
+        // Rouge pour augmentation (mauvais pour le support), Vert pour diminution (bon)
+        const color = isIncrease ? 'var(--danger)' : '#22c55e';
+        const Icon = isIncrease ? TrendingUp : TrendingDown;
+
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                color: color,
+                fontSize: '0.75rem',
+                fontWeight: '700',
+                marginTop: '4px'
+            }}>
+                <Icon size={12} />
+                {isIncrease ? '+' : ''}{percent.toFixed(0)}%
+            </div>
+        );
+    };
 
     return (
         <div style={{ padding: '2rem' }}>
@@ -71,28 +126,21 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 marginBottom: '2rem'
             }}>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Analyse de Performance</h2>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Tableau de Bord de Pilotage</h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                         Mise à jour : {lastUpdate} {refreshing && "(Sync en cours...)"}
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {/* Filtre de Période */}
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
                         <Calendar size={16} color="var(--primary)" />
                         <select
                             value={timeFilter}
                             onChange={(e) => setTimeFilter(e.target.value)}
                             style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--text-main)',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                paddingRight: '20px',
-                                appearance: 'none'
+                                background: 'transparent', border: 'none', color: 'var(--text-main)',
+                                fontSize: '0.875rem', fontWeight: '600', outline: 'none', cursor: 'pointer',
+                                paddingRight: '20px', appearance: 'none'
                             }}
                         >
                             <option value="today" style={{ background: '#1e293b' }}>Aujourd'hui</option>
@@ -133,33 +181,35 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 <div className="glass" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '4px solid var(--danger)', background: 'rgba(239, 68, 68, 0.1)' }}>
                     <h4 style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '10px' }}><Globe size={20} /> Erreur de Proxy (CORS)</h4>
                     <p style={{ fontSize: '0.875rem', marginTop: '8px' }}>
-                        Votre navigateur bloque la connexion directe. Vérifiez l'URL de votre <strong>VITE_WORKER_URL</strong> dans le fichier .env.
+                        Vérifiez l'URL de votre <strong>VITE_WORKER_URL</strong> dans le fichier .env.
                     </p>
                 </div>
             )}
 
             {/* Dynamic KPIs Display */}
             <div style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
-                    <div className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>Total Créés</p>
-                        <p style={{ fontSize: '2.1rem', fontWeight: '800' }}>{filteredTickets.length}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Total Créés</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800' }}>{currentStats.total}</p>
+                        {renderEvolution(currentStats.total, previousStats.total)}
                     </div>
 
-                    {Object.entries(channelGroup).map(([chan, count]) => (
-                        <div key={chan} className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>Canal: {chan}</p>
-                            <p style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--secondary)' }}>{count}</p>
+                    {Object.entries(currentStats.channels).map(([chan, count]) => (
+                        <div key={chan} className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Canal: {chan}</p>
+                            <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{count}</p>
+                            {renderEvolution(count, previousStats.channels[chan] || 0)}
                         </div>
                     ))}
 
-                    {Object.entries(brandGroup).map(([brand, count]) => (
-                        <div key={brand} className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>Marque: {brand}</p>
-                            <p style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--primary)' }}>{count}</p>
+                    {Object.entries(currentStats.brands).map(([brand, count]) => (
+                        <div key={brand} className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Marque: {brand}</p>
+                            <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>{count}</p>
+                            {renderEvolution(count, previousStats.brands[brand] || 0)}
                         </div>
                     ))}
-
                 </div>
             </div>
 
@@ -168,7 +218,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1.5rem' }}>
                     Répartition des thèmes ({timeFilter === 'today' ? "Aujourd'hui" : timeFilter === '7d' ? "7j" : "30j"})
                 </h3>
-                {filteredTickets.length > 0 ? (
+                {currentTickets.length > 0 ? (
                     <ResponsiveContainer width="100%" height="85%">
                         <AreaChart data={chartData}>
                             <defs>
@@ -191,8 +241,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 )}
             </div>
 
-            {/* Performance Agent basée sur les tickets filtrés */}
-            <AgentPerformance tickets={filteredTickets} users={users} />
+            <AgentPerformance tickets={currentTickets} users={users} />
         </div>
     );
 };

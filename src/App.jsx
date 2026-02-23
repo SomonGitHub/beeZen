@@ -53,8 +53,8 @@ function App() {
         if (!activeInstanceId) setActiveInstanceId(initialId)
 
         const instance = data.find(i => i.id === initialId) || data[0]
-        const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 30)
-        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, thirtyDaysAgo)
+        const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
+        const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
 
         setTickets(ticketData)
         setUsers(userData)
@@ -71,8 +71,8 @@ function App() {
     setRefreshing(true)
     try {
       const instance = instances.find(i => i.id === activeInstanceId)
-      const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 30)
-      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, thirtyDaysAgo)
+      const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
+      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
 
       setTickets(ticketData)
       setUsers(userData)
