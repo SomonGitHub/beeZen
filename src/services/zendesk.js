@@ -33,7 +33,7 @@ export const ZendeskService = {
         let currentStartTime = startTime;
         let hasMore = true;
         let pageCount = 0;
-        const maxPages = 3; // Limite à 3000 tickets pour éviter les timeouts et la surcharge mémoire
+        const maxPages = 10; // Limite à 10 000 tickets pour couvrir les grosses instances sur 30 jours
 
         try {
             while (hasMore && pageCount < maxPages) {
