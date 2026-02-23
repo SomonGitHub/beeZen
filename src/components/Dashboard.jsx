@@ -51,13 +51,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         );
     }
 
-    const calculateFRT = (ticketList) => {
-        const mailTickets = ticketList.filter(t => t.via?.channel === 'email' && t.metrics?.reply_time_in_minutes?.calendar);
-        const avgMinutes = mailTickets.length > 0
-            ? mailTickets.reduce((acc, t) => acc + t.metrics.reply_time_in_minutes.calendar, 0) / mailTickets.length
-            : 0;
-        return mailTickets.length > 0 ? `${(avgMinutes / 60).toFixed(1)}h` : '--';
-    };
 
     // Calcul des groupements pour les KPIs
     let channelGroup = {};
@@ -167,10 +160,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         </div>
                     ))}
 
-                    <div className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginBottom: '0.2rem' }}>FRT Mail (Moy)</p>
-                        <p style={{ fontSize: '2.1rem', fontWeight: '800', color: 'var(--secondary)' }}>{calculateFRT(filteredTickets)}</p>
-                    </div>
                 </div>
             </div>
 
