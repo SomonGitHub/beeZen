@@ -7,6 +7,16 @@ const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 
 export const ZendeskService = {
     /**
+     * Nettoie le domaine pour s'assurer qu'il est au bon format
+     */
+    sanitizeDomain(domain) {
+        if (!domain) return "";
+        return domain
+            .replace(/^https?:\/\//, '') // Enlever http:// ou https://
+            .replace(/\/$/, '');        // Enlever le slash final
+    },
+
+    /**
      * Récupère les tickets via le Cloudflare Worker Proxy
      * @param {Object} instance - L'objet instance (domaine, email, token)
      * @param {number} startTime - Timestamp UNIX de début
@@ -14,23 +24,34 @@ export const ZendeskService = {
     async fetchTickets(instance, startTime = 0) {
         if (!instance || !instance.domain || !instance.token) return [];
 
-        const targetUrl = `https://${instance.domain}/api/v2/incremental/tickets.json?start_time=${startTime}`;
+        const cleanDomain = this.sanitizeDomain(instance.domain);
+        const targetUrl = `https://${cleanDomain}/api/v2/incremental/tickets.json?start_time=${startTime}`;
 
         try {
-            // On appelle notre Proxy plutôt que Zendesk directement
             const response = await fetch(`${WORKER_URL}?url=${encodeURIComponent(targetUrl)}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Zendesk-Domain': instance.domain,
+                    'X-Zendesk-Domain': cleanDomain,
                     'X-Zendesk-Email': instance.email,
                     'X-Zendesk-Token': instance.token
                 }
             });
 
+            const contentType = response.headers.get("content-type");
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Erreur Proxy: ${response.statusText}`);
+                // Tentative de lecture du JSON, sinon fallback sur le texte (pour les erreurs Cloudflare 1003 etc)
+                if (contentType && contentType.includes("application/json")) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erreur Proxy: ${response.statusText}`);
+                } else {
+                    const errorText = await response.text();
+                    if (errorText.includes("error code: 1003")) {
+                        throw new Error("ERREUR CLOUDFLARE 1003 : Le Worker refuse l'accès. Vérifiez que l'URL cible est correcte.");
+                    }
+                    throw new Error(`Erreur HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
             }
 
             const data = await response.json();
