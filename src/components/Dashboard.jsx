@@ -175,7 +175,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     const blacklistNames = [
         "Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS",
-        "Matthias LLOYD", "Stéphane MORIN", "Benjamin BLAISE", "SOMME Sylvain", "Agent IA"
+        "Matthias LLOYD", "Stéphane MORIN", "Benjamin BLAISE", "SOMME Sylvain", "Agent IA",
+        "Sébastien GOUIN", "Valentin VENDEUR", "Eric MULE", "THIRON Cédric",
+        "Antoine MOUREAU", "Mickaël JANIAUT", "Anaïs LONEGRO", "Hors ligne",
+        "Xavier JASANADA", "Philippe DELPET", "Xavier SIBILLE", "Camille GERAY",
+        "Alexandra CHAILLEUX", "Vernusse", "Lucy ARROYO", "Claude Arnaud Feumi",
+        "Adrien PATISSON", "Walid BENNIS", "Dina RAZANAKOLONA", "AI Agent"
     ];
     const blacklistIds = ["25403312878748", "366626732000"];
 
