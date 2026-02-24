@@ -215,7 +215,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Nouveaux</p>
                         <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{currentStats.newCount}</p>
-                        {renderEvolution(currentStats.newCount, previousStats.newCount)}
                     </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--accent)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Ouverts</p>
