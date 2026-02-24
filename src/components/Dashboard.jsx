@@ -192,7 +192,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             </div>
 
             {/* Bandeau de Présence Agents */}
-            <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: `4px solid ${(agentStatuses.agent_availabilities?.length > 0) ? 'var(--primary)' : 'var(--text-muted)'}` }}>
+            <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: `4px solid ${(agentStatuses?.agent_availabilities?.length > 0) ? 'var(--primary)' : 'var(--text-muted)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-glass)', paddingRight: '1.5rem' }}>
                     <div style={{ padding: '8px', background: 'var(--primary-glow)', borderRadius: '8px', color: 'var(--primary)' }}>
                         <Globe size={18} />
@@ -201,22 +201,22 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {(!agentStatuses.agent_availabilities || agentStatuses.agent_availabilities.length === 0) ? (
+                    {(!agentStatuses?.agent_availabilities || agentStatuses.agent_availabilities.length === 0) ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {refreshing ? "Recherche des agents..." : (agentStatuses.detail || "Aucun agent en ligne")}
+                            {refreshing ? "Recherche des agents..." : (agentStatuses?.detail || "Aucun agent en ligne")}
                         </span>
                     ) : (
                         agentStatuses.agent_availabilities.map(avail => {
                             // On gère le format standard et le format JSON:API (avail.attributes)
-                            const agentId = avail.attributes?.agent_id || avail.agent_id;
-                            const statusKind = avail.attributes?.agent_status || avail.status_kind;
-                            const statusName = avail.attributes?.agent_status || avail.status_name; // Simplifié si pas de status_name
-                            const updatedAt = avail.attributes?.updated_at || avail.updated_at;
+                            const agentId = avail?.attributes?.agent_id || avail?.agent_id;
+                            const statusKind = avail?.attributes?.agent_status || avail?.status_kind;
+                            const statusName = avail?.attributes?.agent_status || avail?.status_name; // Simplifié si pas de status_name
+                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at;
 
-                            const agent = users.find(u => String(u.id) === String(agentId));
+                            const agent = users?.find(u => String(u.id) === String(agentId));
 
                             return (
-                                <div key={agentId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
+                                <div key={agentId || Math.random()} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
                                     <div style={{ position: 'relative' }}>
                                         {(agent && agent.photo_url) ? (
                                             <img src={agent.photo_url} alt={agent.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
