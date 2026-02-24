@@ -7,7 +7,6 @@ import AgentPerformance from './AgentPerformance';
 const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, users, agentStatuses, refreshing, onRefresh, error }) => {
     const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString());
     const [timeFilter, setTimeFilter] = useState('today'); // 'today', '7d', '30d'
-    const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'admin', 'agent'
 
     const safeTickets = Array.isArray(tickets) ? tickets : [];
     const safeUsers = Array.isArray(users) ? users : [];
@@ -174,13 +173,13 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
     const blacklistIds = ["25403312878748", "366626732000"];
 
-    // Fusion des disponibilités réelles avec la liste complète du staff
+    // Fusion des disponibilités réelles avec la liste complète du staff (Admin & Equipe seulement)
     const allStaffPresence = safeUsers
         .filter(u => {
             const isActive = u.active !== 0;
+            const isSupportRole = u.role === 'admin' || u.role === 'agent';
             const notBlacklisted = !blacklistIds.includes(String(u.id)) && !blacklistNames.some(bn => u.name.toUpperCase().includes(bn.toUpperCase()));
-            const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-            return isActive && notBlacklisted && matchesRole;
+            return isActive && isSupportRole && notBlacklisted;
         })
         .map(user => {
             const availability = (agentStatuses?.agent_availabilities || []).find(avail =>
@@ -249,18 +248,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         <Globe size={18} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value)}
-                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.65rem', borderRadius: '4px', padding: '2px 4px', outline: 'none' }}
-                            >
-                                <option value="all">Tout le staff</option>
-                                <option value="admin">Admin</option>
-                                <option value="agent">Equipe</option>
-                            </select>
-                        </div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
                             {allStaffPresence.filter(p => p.isOnline).length} actif(s) / {allStaffPresence.length} vus
                         </span>
