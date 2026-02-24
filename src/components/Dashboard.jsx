@@ -178,9 +178,9 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         .filter(u => {
             const isActive = u.active !== 0;
             const isSupportRole = u.role === 'admin' || u.role === 'agent';
-            const isLightAgent = String(u.name || "").toLowerCase().includes("light agent");
+            const isLight = String(u.name || "").toLowerCase().includes("light") || String(u.role || "").toLowerCase().includes("light");
             const notBlacklisted = !blacklistIds.includes(String(u.id)) && !blacklistNames.some(bn => u.name.toUpperCase().includes(bn.toUpperCase()));
-            return isActive && isSupportRole && !isLightAgent && notBlacklisted;
+            return isActive && isSupportRole && !isLight && notBlacklisted;
         })
         .map(user => {
             const availability = (agentStatuses?.agent_availabilities || []).find(avail =>
