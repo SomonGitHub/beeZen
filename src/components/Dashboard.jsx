@@ -173,13 +173,21 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
     const blacklistIds = ["25403312878748", "366626732000"];
 
-    const filteredAvailabilities = (agentStatuses?.agent_availabilities || []).filter(avail => {
-        const agentId = String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id);
-        const agent = safeUsers?.find(u => String(u.id) === agentId);
-        const name = agent ? agent.name : "";
+    // Fusion des disponibilités réelles avec la liste complète du staff
+    const allStaffPresence = safeUsers
+        .filter(u => u.active !== 0 && !blacklistIds.includes(String(u.id)) && !blacklistNames.some(bn => u.name.toUpperCase().includes(bn.toUpperCase())))
+        .map(user => {
+            const availability = (agentStatuses?.agent_availabilities || []).find(avail =>
+                String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id) === String(user.id)
+            );
 
-        return !blacklistIds.includes(agentId) && !blacklistNames.some(bn => name.toUpperCase().includes(bn.toUpperCase()));
-    });
+            return {
+                user,
+                availability,
+                isOnline: !!availability && !['offline', 'hors ligne'].includes(String(availability?.status_name || availability?.attributes?.agent_status || "").toLowerCase())
+            };
+        })
+        .sort((a, b) => (b.isOnline ? 1 : 0) - (a.isOnline ? 1 : 0)); // Actifs en premier
 
     return (
         <div style={{ padding: '2rem' }}>
@@ -237,22 +245,21 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                            {filteredAvailabilities.length} actif(s)
-                            {agentStatuses?.agent_availabilities?.length > filteredAvailabilities.length && ` (+${agentStatuses.agent_availabilities.length - filteredAvailabilities.length} masqués)`}
+                            {allStaffPresence.filter(p => p.isOnline).length} actif(s) / {allStaffPresence.length} total
                         </span>
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {filteredAvailabilities.length === 0 ? (
+                    {allStaffPresence.length === 0 ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {refreshing ? "Recherche des agents..." : (typeof agentStatuses?.detail === 'string' ? agentStatuses.detail : (agentStatuses?.detail ? "Erreur API (Détail complexe)" : "Aucun agent en ligne"))}
+                            {refreshing ? "Recherche des agents..." : "Aucun agent configuré"}
                         </span>
                     ) : (
-                        filteredAvailabilities.map(avail => {
-                            const agentId = avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id;
-                            const statusKind = avail?.attributes?.agent_status || avail?.status_kind || avail?.status;
-                            let statusName = avail?.attributes?.agent_status || avail?.status_name || statusKind;
+                        allStaffPresence.map(({ user, availability }) => {
+                            const agentId = user.id;
+                            const statusKind = availability?.attributes?.agent_status || availability?.status_kind || availability?.status || "offline";
+                            let statusName = availability?.attributes?.agent_status || availability?.status_name || statusKind;
 
                             if (typeof statusName === 'object' && statusName !== null) {
                                 statusName = statusName.name || statusName.label || statusName.status_name || "Statut inconnu";
@@ -267,14 +274,15 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             else if (statusLower === 'transfers_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
 
                             // Extraction de la date (Timestamp)
-                            let updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at || avail?.timestamp;
+                            let updatedAt = availability?.attributes?.updated_at || availability?.updated_at || availability?.attributes?.created_at || availability?.created_at || availability?.timestamp;
 
-                            // Si vraiment aucune date, on triche avec l'heure de la requête (mieux que "...")
+                            // Si offline et pas de date, on ne montre pas de durée ou on met une date très vieille
+                            const hasTime = !!updatedAt;
                             if (!updatedAt) {
                                 updatedAt = new Date().toISOString();
                             }
 
-                            const agent = safeUsers?.find(u => String(u.id) === String(agentId));
+                            const agent = user;
 
                             return (
                                 <div key={agentId || Math.random()} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
@@ -289,9 +297,9 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                         <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(label), border: '2px solid #0c0e12' }}></div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent ? agent.name : `Agent #${agentId}`}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent.name}</span>
                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                                            {label} • {formatDuration(updatedAt)}
+                                            {label} {hasTime && `• ${formatDuration(updatedAt)}`}
                                         </span>
                                     </div>
                                 </div>
