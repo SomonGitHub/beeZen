@@ -70,18 +70,22 @@ async function handleSync(request, env, corsHeaders) {
 
                 const statements = tickets.map(t => {
                     return env.DB.prepare(`
-                        INSERT INTO tickets (id, instance_id, subject, status, created_at, updated_at, brand_name, channel, metrics_json, assignee_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO tickets (id, instance_id, subject, status, created_at, updated_at, brand_name, channel, metrics_json, assignee_id, tags, custom_fields_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(id) DO UPDATE SET 
                             status=excluded.status, 
                             updated_at=excluded.updated_at, 
                             metrics_json=excluded.metrics_json,
-                            assignee_id=excluded.assignee_id
+                            assignee_id=excluded.assignee_id,
+                            tags=excluded.tags,
+                            custom_fields_json=excluded.custom_fields_json
                     `).bind(
                         t.id, instanceId, t.subject, t.status, t.created_at, t.updated_at,
                         brandsMap[t.brand_id] || "Inconnu", t.via?.channel || "autre",
                         JSON.stringify(metricsMap[t.id] || null),
-                        t.assignee_id
+                        t.assignee_id,
+                        JSON.stringify(t.tags || []),
+                        JSON.stringify(t.custom_fields || [])
                     );
                 });
                 await env.DB.batch(statements);

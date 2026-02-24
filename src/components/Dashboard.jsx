@@ -70,19 +70,42 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         let resolved = 0;
         let newCount = 0;
         let openCount = 0;
+        let unassignedNewCount = 0;
+        let jiraCount = 0;
         (ticketList || []).forEach(t => {
             const chan = t.channel || t.via?.channel || 'autre';
             const brand = t.brand_name || 'Inconnu';
             channels[chan] = (channels[chan] || 0) + 1;
             brands[brand] = (brands[brand] || 0) + 1;
 
-            if (t.status === 'pending') pending++;
+            if (t.status === 'pending') {
+                pending++;
+                // Détection JIRA : via tags ou custom fields
+                const tags = Array.isArray(t.tags) ? t.tags : (typeof t.tags === 'string' ? JSON.parse(t.tags || '[]') : []);
+                const hasJiraTag = tags.some(tag => String(tag).toLowerCase().includes('jira'));
+
+                // Détection via custom fields (on cherche "jira" dans les valeurs ou on identifie le champ par son nom si passé en JSON)
+                let hasJiraField = false;
+                try {
+                    const cfields = typeof t.custom_fields_json === 'string' ? JSON.parse(t.custom_fields_json || '[]') : (t.custom_fields || []);
+                    hasJiraField = cfields.some(cf => {
+                        const val = String(cf.value || "").toLowerCase();
+                        // Un ticket JIRA a souvent une clé type SVD-1234
+                        return val.includes('jira') || /^[A-Z]+-[0-9]+/.test(cf.value);
+                    });
+                } catch (e) { }
+
+                if (hasJiraTag || hasJiraField) jiraCount++;
+            }
             else if (t.status === 'hold') hold++;
             else if (t.status === 'solved' || t.status === 'closed') resolved++;
-            else if (t.status === 'new') newCount++;
+            else if (t.status === 'new') {
+                newCount++;
+                if (!t.assignee_id) unassignedNewCount++;
+            }
             else if (t.status === 'open') openCount++;
         });
-        return { total: (ticketList || []).length, channels, brands, pending, hold, resolved, newCount, openCount };
+        return { total: (ticketList || []).length, channels, brands, pending, hold, resolved, newCount, openCount, unassignedNewCount, jiraCount };
     };
 
     const currentStats = aggregateData(currentTickets);
@@ -367,6 +390,11 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
                 {/* Deuxième ligne de KPIs pour les statuts critique */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '4px solid var(--primary)', background: 'rgba(255,193,7,0.05)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase', fontWeight: '700' }}>File d'attente</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>{currentStats.unassignedNewCount}</p>
+                        {renderEvolution(currentStats.unassignedNewCount, previousStats.unassignedNewCount)}
+                    </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Nouveaux</p>
                         <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{currentStats.newCount}</p>
@@ -383,7 +411,14 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                     </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--warning)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>En Attente (Client)</p>
-                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--warning)' }}>{currentStats.pending}</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--warning)' }}>
+                            {currentStats.pending}
+                            {currentStats.jiraCount > 0 && (
+                                <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '8px', fontWeight: '400' }}>
+                                    (dont {currentStats.jiraCount} JIRA)
+                                </span>
+                            )}
+                        </p>
                         {renderEvolution(currentStats.pending, previousStats.pending)}
                     </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid #8b5cf6' }}>
