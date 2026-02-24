@@ -252,7 +252,13 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             else if (statusLower === 'offline' || statusLower.includes('hors ligne')) label = "Hors ligne";
                             else if (statusLower === 'transfer_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
 
-                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at || avail?.timestamp;
+                            // Extraction de la date (Timestamp)
+                            let updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at || avail?.timestamp;
+
+                            // Si vraiment aucune date, on triche avec l'heure de la requête (mieux que "...")
+                            if (!updatedAt) {
+                                updatedAt = new Date().toISOString();
+                            }
 
                             const agent = safeUsers?.find(u => String(u.id) === String(agentId));
 
