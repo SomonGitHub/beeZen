@@ -173,13 +173,14 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
     const blacklistIds = ["25403312878748", "366626732000"];
 
-    // Fusion des disponibilités réelles avec la liste complète du staff (Admin & Equipe seulement)
+    // Fusion des disponibilités réelles avec la liste complète du staff (Admin & Equipe seulement, pas de Light Agents)
     const allStaffPresence = safeUsers
         .filter(u => {
             const isActive = u.active !== 0;
             const isSupportRole = u.role === 'admin' || u.role === 'agent';
+            const isLightAgent = String(u.name || "").toLowerCase().includes("light agent");
             const notBlacklisted = !blacklistIds.includes(String(u.id)) && !blacklistNames.some(bn => u.name.toUpperCase().includes(bn.toUpperCase()));
-            return isActive && isSupportRole && notBlacklisted;
+            return isActive && isSupportRole && !isLightAgent && notBlacklisted;
         })
         .map(user => {
             const availability = (agentStatuses?.agent_availabilities || []).find(avail =>
