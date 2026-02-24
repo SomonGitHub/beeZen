@@ -138,23 +138,34 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     const formatDuration = (timestamp) => {
         if (!timestamp) return '...';
-        const start = new Date(timestamp).getTime();
-        const diff = Math.floor((Date.now() - start) / 1000);
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return '...';
+
+        const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (diff < 0) return 'Juste à l\'instant'; // Horloge désynchronisée ?
 
         if (diff < 60) return `${diff}s`;
         const mins = Math.floor(diff / 60);
-        if (mins < 60) return `${mins}min`;
+        if (mins < 60) return `${mins}m`;
         const hours = Math.floor(mins / 60);
-        return `${hours}h ${mins % 60}m`;
+        if (hours < 24) return `${hours}h ${mins % 60}m`;
+        return '> 24h';
     };
 
-    const getStatusColor = (kind) => {
-        switch (kind) {
-            case 'online': return '#22c55e';
-            case 'away': return '#f59e0b';
-            case 'offline': return '#94a3b8';
-            default: return '#94a3b8';
-        }
+    const getStatusColor = (status) => {
+        if (!status) return '#94a3b8';
+        const s = String(status).toLowerCase();
+
+        // En ligne
+        if (s === 'online' || s === 'en ligne') return '#22c55e'; // Vert
+
+        // Transfert uniquement / Away
+        if (s === 'away' || s === 'transfert uniquement' || s.includes('transfert')) return '#f59e0b'; // Orange
+
+        // Hors ligne
+        if (s === 'offline' || s === 'hors ligne') return '#ef4444'; // Rouge
+
+        return '#94a3b8'; // Gris par défaut
     };
 
     const instance = instances.find(i => i.id === activeInstanceId) || instances[0];
@@ -226,12 +237,22 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
                         return filteredAvailabilities.map(avail => {
                             const agentId = avail?.attributes?.agent_id || avail?.agent_id;
-                            const statusKind = avail?.attributes?.agent_status || avail?.status_kind;
-                            let statusName = avail?.attributes?.agent_status || avail?.status_name;
+                            const statusKind = avail?.attributes?.agent_status || avail?.status_kind || avail?.status;
+                            let statusName = avail?.attributes?.agent_status || avail?.status_name || statusKind;
+
                             if (typeof statusName === 'object' && statusName !== null) {
-                                statusName = statusName.name || statusName.label || "Statut inconnu";
+                                statusName = statusName.name || statusName.label || statusName.status_name || "Statut inconnu";
                             }
-                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at;
+
+                            // Traduction vers le français pour les labels standards si nécessaire
+                            const statusLower = String(statusName).toLowerCase();
+                            let label = statusName;
+                            if (statusLower === 'online') label = "En ligne";
+                            else if (statusLower === 'away') label = "Absent";
+                            else if (statusLower === 'offline') label = "Hors ligne";
+                            else if (statusLower === 'transfer_only') label = "Transfert uniquement";
+
+                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at;
 
                             const agent = safeUsers?.find(u => String(u.id) === String(agentId));
 
@@ -250,7 +271,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent ? agent.name : `Agent #${agentId}`}</span>
                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                                            {statusName} • {formatDuration(updatedAt)}
+                                            {label} • {formatDuration(updatedAt)}
                                         </span>
                                     </div>
                                 </div>
