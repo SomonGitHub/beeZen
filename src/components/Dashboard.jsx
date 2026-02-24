@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink, Users, Phone, Clipboard } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink, Phone, Clipboard } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
@@ -236,18 +236,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         </select>
                         <ChevronDown size={14} style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
                     </div>
-                    <button style={{ padding: '8px 16px', border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={async () => {
-                        setRefreshing(true);
-                        try {
-                            const instance = instances.find(i => i.id === activeInstanceId);
-                            await ZendeskService.syncStaff(instance);
-                            alert("Synchronisation du staff (Noms/Photos) terminée !");
-                            onRefresh();
-                        } catch (e) { alert(e.message); }
-                        finally { setRefreshing(false); }
-                    }} disabled={refreshing}>
-                        <Users size={18} /> Sync Staff
-                    </button>
                     <button style={{ padding: '8px 16px', background: 'var(--primary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={onRefresh} disabled={refreshing}>
                         <RefreshCcw size={18} className={refreshing ? "animate-spin" : ""} /> Actualiser
                     </button>
