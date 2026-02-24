@@ -19,6 +19,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         const now = new Date();
         const nowUnix = Math.floor(now.getTime() / 1000);
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+        const secondsSinceMidnight = nowUnix - todayStart;
 
         let current = { start: 0, end: nowUnix };
         let previous = { start: 0, end: 0 };
@@ -28,15 +29,16 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             const isMonday = now.getDay() === 1;
             const daysToSubtract = isMonday ? 3 : 1;
             previous.start = todayStart - (86400 * daysToSubtract);
-            previous.end = todayStart - (86400 * (daysToSubtract - 1));
+            // Comparaison à heure égale (Like-for-Like)
+            previous.end = previous.start + secondsSinceMidnight;
         } else if (timeFilter === '7d') {
             current.start = todayStart - (86400 * 7);
             previous.start = current.start - (86400 * 7);
-            previous.end = current.start;
+            previous.end = current.start + secondsSinceMidnight;
         } else {
             current.start = todayStart - (86400 * 30);
             previous.start = current.start - (86400 * 30);
-            previous.end = current.start;
+            previous.end = current.start + secondsSinceMidnight;
         }
         return { current, previous };
     };
@@ -210,6 +212,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                 <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Sujet</th>
                                 <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Marque</th>
                                 <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Canal</th>
+                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Statut</th>
                                 <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Créé à (H:min)</th>
                             </tr>
                         </thead>
