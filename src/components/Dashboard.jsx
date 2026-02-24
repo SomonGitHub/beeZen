@@ -317,7 +317,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent.name}</span>
                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                                            {label} {hasTime && `• ${formatDuration(updatedAt)}`} • <span style={{ opacity: 0.5 }}>{agent.role}</span>
+                                            {label} {hasTime && `• ${formatDuration(updatedAt)}`}
                                         </span>
                                     </div>
                                 </div>
