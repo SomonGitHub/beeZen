@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink, Users } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink, Users, Phone, Clipboard } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
@@ -175,7 +175,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     const blacklistNames = [
         "Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS",
-        "Matthias LLOYD", "Stéphane MORIN", "Benjamin BLAISE"
+        "Matthias LLOYD", "Stéphane MORIN", "Benjamin BLAISE", "SOMME Sylvain", "Agent IA"
     ];
     const blacklistIds = ["25403312878748", "366626732000"];
 
@@ -196,9 +196,16 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id) === String(user.id)
             );
 
+            // Analyse des canaux (Tickets / Appels)
+            const channels = availability?.attributes?.channels || availability?.channels || [];
+            const canHandleTickets = channels.some(c => (c.name || c) === 'support');
+            const canHandleCalls = channels.some(c => (c.name || c) === 'talk');
+
             return {
                 user,
                 availability,
+                canHandleTickets,
+                canHandleCalls,
                 isOnline: !!availability && !['offline', 'hors ligne'].includes(String(availability?.status_name || availability?.attributes?.agent_status || "").toLowerCase())
             };
         })
@@ -271,7 +278,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             {refreshing ? "Recherche des agents..." : "Aucun agent configuré"}
                         </span>
                     ) : (
-                        allStaffPresence.map(({ user, availability }) => {
+                        allStaffPresence.map(({ user, availability, canHandleTickets, canHandleCalls }) => {
                             const agentId = user.id;
                             const statusKind = availability?.attributes?.agent_status || availability?.status_kind || availability?.status || "offline";
                             let statusName = availability?.attributes?.agent_status || availability?.status_name || statusKind;
@@ -315,7 +322,13 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                         <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(label), border: '2px solid #0c0e12' }}></div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent.name}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent.name}</span>
+                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                {canHandleTickets && <Clipboard size={10} color="var(--primary)" title="Peut répondre aux Tickets" />}
+                                                {canHandleCalls && <Phone size={10} color="#3b82f6" title="Peut répondre aux Appels" />}
+                                            </div>
+                                        </div>
                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
                                             {label} {hasTime && `• ${formatDuration(updatedAt)}`}
                                         </span>
