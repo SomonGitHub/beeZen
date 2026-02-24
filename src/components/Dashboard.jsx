@@ -292,16 +292,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                 statusName = statusName.name || statusName.label || statusName.status_name || "Statut inconnu";
                             }
 
-                            // Traduction vers le français pour les labels standards si nécessaire
-                            const statusLower = String(statusName).toLowerCase();
-                            let label = statusName;
-                            if (statusLower === 'online' || statusLower.includes('en ligne')) label = "En ligne";
-                            else if (statusLower === 'away' || statusLower.includes('absent')) label = "Absent";
-                            else if (statusLower === 'busy' || statusLower.includes('occupé')) label = "Occupé";
-                            else if (statusLower === 'on_call' || statusLower.includes('en appel')) label = "En ligne (Appel)";
-                            else if (statusLower === 'pending') label = "En attente";
-                            else if (statusLower === 'offline' || statusLower.includes('hors ligne')) label = "Hors ligne";
-                            else if (statusLower === 'transfers_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
+                            const label = statusName;
 
                             // Extraction de la date (Timestamp)
                             let updatedAt = availability?.attributes?.updated_at || availability?.updated_at || availability?.attributes?.created_at || availability?.created_at || availability?.timestamp;
