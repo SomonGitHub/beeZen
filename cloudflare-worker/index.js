@@ -163,8 +163,8 @@ async function handleAgentStatuses(request, env, corsHeaders) {
 
     try {
         const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        // Zendesk Agent Availabilities API est une JSON:API, on retire le .json et on ajoute l'Accept
-        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities`;
+        // Retour au format standard .json qui est plus universel chez Zendesk
+        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities.json`;
 
         console.log(`Fetching agent statuses from: ${zendeskUrl}`);
 
@@ -172,7 +172,7 @@ async function handleAgentStatuses(request, env, corsHeaders) {
             headers: {
                 "Authorization": "Basic " + btoa(email + "/token:" + token),
                 "Content-Type": "application/json",
-                "Accept": "application/vnd.api+json"
+                "Accept": "application/json"
             }
         });
 
@@ -180,7 +180,6 @@ async function handleAgentStatuses(request, env, corsHeaders) {
             const errText = await response.text();
             console.error(`Zendesk API Error (${response.status}): ${errText}`);
 
-            // On renvoie l'erreur brute pour le diagnostic
             return new Response(JSON.stringify({
                 error: "Zendesk API Error",
                 detail: `Status ${response.status}: ${errText}`,
@@ -189,8 +188,7 @@ async function handleAgentStatuses(request, env, corsHeaders) {
         }
 
         const data = await response.json();
-        // Dans JSON:API le format peut différer (data: [...])
-        const availabilities = data.data || data.agent_availabilities || [];
+        const availabilities = data.agent_availabilities || data.data || [];
 
         console.log(`Fetched ${availabilities.length} agent statuses`);
         return new Response(JSON.stringify({
