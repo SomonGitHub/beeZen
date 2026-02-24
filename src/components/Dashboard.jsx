@@ -62,13 +62,18 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const aggregateData = (ticketList) => {
         let channels = {};
         let brands = {};
+        let pending = 0;
+        let hold = 0;
         ticketList.forEach(t => {
             const chan = t.channel || t.via?.channel || 'autre';
             const brand = t.brand_name || 'Inconnu';
             channels[chan] = (channels[chan] || 0) + 1;
             brands[brand] = (brands[brand] || 0) + 1;
+
+            if (t.status === 'pending') pending++;
+            if (t.status === 'hold') hold++;
         });
-        return { total: ticketList.length, channels, brands };
+        return { total: ticketList.length, channels, brands, pending, hold };
     };
 
     const currentStats = aggregateData(currentTickets);
@@ -165,6 +170,20 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             {renderEvolution(count, previousStats.brands[brand] || 0)}
                         </div>
                     ))}
+                </div>
+
+                {/* Deuxième ligne de KPIs pour les statuts critique */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--warning)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>En Attente (Client)</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--warning)' }}>{currentStats.pending}</p>
+                        {renderEvolution(currentStats.pending, previousStats.pending)}
+                    </div>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid #8b5cf6' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>En Pause (Interne)</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: '#8b5cf6' }}>{currentStats.hold}</p>
+                        {renderEvolution(currentStats.hold, previousStats.hold)}
+                    </div>
                 </div>
             </div>
 
