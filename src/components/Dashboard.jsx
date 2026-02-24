@@ -173,7 +173,10 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     const instance = instances.find(i => i.id === activeInstanceId) || instances[0];
 
-    const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
+    const blacklistNames = [
+        "Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS",
+        "Matthias LLOYD", "Stéphane MORIN", "Benjamin BLAISE"
+    ];
     const blacklistIds = ["25403312878748", "366626732000"];
 
     // Fusion des disponibilités réelles avec la liste complète du staff (Admin & Equipe seulement, pas de Light Agents)
