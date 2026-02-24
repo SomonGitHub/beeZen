@@ -236,7 +236,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         }
 
                         return filteredAvailabilities.map(avail => {
-                            const agentId = avail?.attributes?.agent_id || avail?.agent_id;
+                            const agentId = avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id;
                             const statusKind = avail?.attributes?.agent_status || avail?.status_kind || avail?.status;
                             let statusName = avail?.attributes?.agent_status || avail?.status_name || statusKind;
 
@@ -247,12 +247,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             // Traduction vers le français pour les labels standards si nécessaire
                             const statusLower = String(statusName).toLowerCase();
                             let label = statusName;
-                            if (statusLower === 'online') label = "En ligne";
-                            else if (statusLower === 'away') label = "Absent";
-                            else if (statusLower === 'offline') label = "Hors ligne";
-                            else if (statusLower === 'transfer_only') label = "Transfert uniquement";
+                            if (statusLower === 'online' || statusLower.includes('en ligne')) label = "En ligne";
+                            else if (statusLower === 'away' || statusLower.includes('absent')) label = "Absent";
+                            else if (statusLower === 'offline' || statusLower.includes('hors ligne')) label = "Hors ligne";
+                            else if (statusLower === 'transfer_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
 
-                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at;
+                            const updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at || avail?.timestamp;
 
                             const agent = safeUsers?.find(u => String(u.id) === String(agentId));
 
@@ -266,7 +266,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                                 {agent ? agent.name.charAt(0) : '?'}
                                             </div>
                                         )}
-                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(statusKind), border: '2px solid #0c0e12' }}></div>
+                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(label), border: '2px solid #0c0e12' }}></div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent ? agent.name : `Agent #${agentId}`}</span>
