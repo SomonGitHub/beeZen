@@ -13,11 +13,13 @@ const AgentPerformance = ({ tickets = [], users = [] }) => {
     // Agrégation des tickets par Agent
     const safeTickets = Array.isArray(tickets) ? tickets : [];
     const agentData = safeTickets.reduce((acc, ticket) => {
-        const id = ticket.assignee_id || 'Non assigné';
+        const id = ticket.assignee_id;
+        if (!id) return acc; // On ignore les tickets non assignés pour ce graph
+
         if (!acc[id]) {
             acc[id] = {
                 id,
-                name: userMap[id] || (id === 'Non assigné' ? 'Non assigné' : `Agent ${id}`),
+                name: userMap[id] || `Agent ${id}`,
                 solved: 0
             };
         }
@@ -29,6 +31,7 @@ const AgentPerformance = ({ tickets = [], users = [] }) => {
     }, {});
 
     const chartData = Object.values(agentData)
+        .filter(agent => agent.solved > 0) // On ne montre que ceux qui ont bossé
         .sort((a, b) => b.solved - a.solved)
         .slice(0, 10); // On peut en afficher un peu plus si on a de la place
 

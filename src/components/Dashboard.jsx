@@ -387,45 +387,62 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
             <AgentPerformance tickets={currentTickets} users={safeUsers} />
 
-            {/* Table de vérification pour "Aujourd'hui" */}
+            {/* Table de vérification pour les tickets "Non assignés" */}
             <div className="glass" style={{ padding: '1.5rem', marginTop: '2.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Détail des tickets (Audit de données)</h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Affichage des tickets identifiés pour cette période</span>
+                    <h3 style={{ fontSize: '1rem', fontWeight: '600' }}>Détail des tickets "Non assignés" (Audit)</h3>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tickets résolus ou fermés sans agent attribué</span>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border-glass)', textAlign: 'left' }}>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>ID</th>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Sujet</th>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Marque</th>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Canal</th>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Statut</th>
-                                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Créé à (H:min)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentTickets.slice(0, 50).map(t => (
-                                <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                                    <td style={{ padding: '10px 12px' }}>
-                                        <a href={`https://${instance.domain}/agent/tickets/${t.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            #{t.id} <ExternalLink size={12} />
-                                        </a>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject}</td>
-                                    <td style={{ padding: '10px 12px' }}>{t.brand_name}</td>
-                                    <td style={{ padding: '10px 12px' }}>{t.via?.channel}</td>
-                                    <td style={{ padding: '10px 12px' }}>{new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {currentTickets.length > 50 && (
-                        <p style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                            (+ {currentTickets.length - 50} autres tickets...)
-                        </p>
-                    )}
+                    {(() => {
+                        const unassignedTickets = currentTickets.filter(t => !t.assignee_id);
+
+                        if (unassignedTickets.length === 0) {
+                            return (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                    Aucun ticket "Non assigné" identifié sur cette période.
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--border-glass)', textAlign: 'left' }}>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>ID</th>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Sujet</th>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Marque</th>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Canal</th>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Statut</th>
+                                            <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Créé à (H:min)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {unassignedTickets.slice(0, 50).map(t => (
+                                            <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                                                <td style={{ padding: '10px 12px' }}>
+                                                    <a href={`https://${instance.domain}/agent/tickets/${t.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        #{t.id} <ExternalLink size={12} />
+                                                    </a>
+                                                </td>
+                                                <td style={{ padding: '10px 12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.subject}</td>
+                                                <td style={{ padding: '10px 12px' }}>{t.brand_name}</td>
+                                                <td style={{ padding: '10px 12px' }}>{t.via?.channel}</td>
+                                                <td style={{ padding: '10px 12px' }}>{t.status}</td>
+                                                <td style={{ padding: '10px 12px' }}>{new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {unassignedTickets.length > 50 && (
+                                    <p style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                        (+ {unassignedTickets.length - 50} autres tickets...)
+                                    </p>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
             </div>
         </div>
