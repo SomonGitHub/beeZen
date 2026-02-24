@@ -159,8 +159,11 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         // En ligne
         if (s === 'online' || s === 'en ligne') return '#22c55e'; // Vert
 
-        // Transfert uniquement / Away
-        if (s === 'away' || s === 'transfert uniquement' || s.includes('transfert')) return '#f59e0b'; // Orange
+        // Occupé / Appel (Talk)
+        if (s === 'busy' || s === 'occupé' || s.includes('appel') || s.includes('call')) return '#3b82f6'; // Bleu
+
+        // Transfert uniquement / Away / Pending
+        if (s === 'away' || s === 'transfert uniquement' || s.includes('transfert') || s === 'pending') return '#f59e0b'; // Orange
 
         // Hors ligne
         if (s === 'offline' || s === 'hors ligne') return '#ef4444'; // Rouge
@@ -276,6 +279,9 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             let label = statusName;
                             if (statusLower === 'online' || statusLower.includes('en ligne')) label = "En ligne";
                             else if (statusLower === 'away' || statusLower.includes('absent')) label = "Absent";
+                            else if (statusLower === 'busy' || statusLower.includes('occupé')) label = "Occupé";
+                            else if (statusLower === 'on_call' || statusLower.includes('en appel')) label = "En ligne (Appel)";
+                            else if (statusLower === 'pending') label = "En attente";
                             else if (statusLower === 'offline' || statusLower.includes('hors ligne')) label = "Hors ligne";
                             else if (statusLower === 'transfers_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
 
