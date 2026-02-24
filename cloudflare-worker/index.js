@@ -163,38 +163,53 @@ async function handleAgentStatuses(request, env, corsHeaders) {
 
     try {
         const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        // Retour au format standard .json qui est plus universel chez Zendesk
-        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities.json`;
+        const auth = "Basic " + btoa(email + "/token:" + token);
 
-        console.log(`Fetching agent statuses from: ${zendeskUrl}`);
+        // Stratégie de repli : on essaie plusieurs endpoints Zendesk
+        const endpoints = [
+            `https://${cleanDomain}/api/v2/agent_availabilities`, // JSON:API style
+            `https://${cleanDomain}/api/v2/agent_availabilities.json`, // Support style
+            `https://${cleanDomain}/api/v2/agent_statuses` // Fallback statuses
+        ];
 
-        const response = await fetch(zendeskUrl, {
-            headers: {
-                "Authorization": "Basic " + btoa(email + "/token:" + token),
-                "Content-Type": "application/json",
-                "Accept": "application/json"
+        let lastError = null;
+        for (const url of endpoints) {
+            console.log(`Trying agent status endpoint: ${url}`);
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        "Authorization": auth,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const availabilities = data.agent_availabilities || data.data || [];
+                    console.log(`Success on ${url} with ${availabilities.length} items`);
+                    return new Response(JSON.stringify({
+                        ...data,
+                        agent_availabilities: availabilities,
+                        source_url: url
+                    }), { headers: corsHeaders });
+                } else {
+                    const err = await response.text();
+                    lastError = { status: response.status, text: err, url };
+                    console.warn(`Failed endpoint ${url}: ${response.status}`);
+                }
+            } catch (e) {
+                console.warn(`Fetch error for ${url}: ${e.message}`);
             }
-        });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error(`Zendesk API Error (${response.status}): ${errText}`);
-
-            return new Response(JSON.stringify({
-                error: "Zendesk API Error",
-                detail: `Status ${response.status}: ${errText}`,
-                agent_availabilities: []
-            }), { headers: corsHeaders });
         }
 
-        const data = await response.json();
-        const availabilities = data.agent_availabilities || data.data || [];
-
-        console.log(`Fetched ${availabilities.length} agent statuses`);
+        // Si aucun n'a marché
         return new Response(JSON.stringify({
-            ...data,
-            agent_availabilities: availabilities
+            error: "All presence endpoints failed",
+            detail: `Last try: ${lastError?.status} on ${lastError?.url}. Error: ${lastError?.text}`,
+            agent_availabilities: []
         }), { headers: corsHeaders });
+
     } catch (e) {
         console.error(`Worker error in handleAgentStatuses: ${e.message}`);
         return new Response(JSON.stringify({ error: e.message, agent_availabilities: [] }), { status: 500, headers: corsHeaders });
