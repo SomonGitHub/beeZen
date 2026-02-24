@@ -94,6 +94,11 @@ function App() {
       if (!instance) return;
 
       const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
+
+      // 1. Sync du Staff pour s'assurer que tout le monde est identifié
+      await ZendeskService.syncStaff(instance)
+
+      // 2. Fetch des tickets et de la liste d'utilisateurs consolidée
       const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
       setTickets(ticketData || [])
       setUsers(userData || [])

@@ -17,6 +17,7 @@ export default {
         const action = url.searchParams.get("action") || "proxy";
 
         if (action === "sync") return await handleSync(request, env, corsHeaders);
+        if (action === "sync_staff") return await handleSyncStaff(request, env, corsHeaders);
         if (action === "get_tickets") return await handleGetTickets(request, env, corsHeaders);
         if (action === "get_agent_statuses") return await handleAgentStatuses(request, env, corsHeaders);
 
@@ -215,3 +216,44 @@ async function handleAgentStatuses(request, env, corsHeaders) {
         return new Response(JSON.stringify({ error: e.message, agent_availabilities: [] }), { status: 500, headers: corsHeaders });
     }
 }
+/**
+ * Action: sync_staff - Récupère TOUS les agents/admins de Zendesk
+ */
+async function handleSyncStaff(request, env, corsHeaders) {
+    try {
+        const { instanceId, domain, email, token } = await request.json();
+        const auth = btoa(`${email}/token:${token}`);
+
+        let url = `https://${domain}/api/v2/users.json?role[]=agent&role[]=admin`;
+        let total = 0;
+
+        // On fait au moins une page (100 agents), on pourra boucler si besoin plus tard
+        const response = await fetch(url, { headers: { "Authorization": `Basic ${auth}` } });
+        if (!response.ok) throw new Error(`Zendesk error: ${response.status}`);
+
+        const data = await response.json();
+        const users = data.users || [];
+
+        if (users.length > 0) {
+            const userStatements = users.map(u => {
+                return env.DB.prepare(`
+                    INSERT INTO users (id, instance_id, name, email, role, active, photo_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET 
+                        name=excluded.name, 
+                        email=excluded.email, 
+                        active=excluded.active, 
+                        photo_url=excluded.photo_url
+                `).bind(u.id, instanceId, u.name, u.email, u.role, u.active ? 1 : 0, u.photo?.content_url || null);
+            });
+            await env.DB.batch(userStatements);
+            total = users.length;
+        }
+
+        return new Response(JSON.stringify({ success: true, count: total }), { headers: corsHeaders });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    }
+}
+
+// ... fin du fichier ...

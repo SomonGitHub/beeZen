@@ -190,6 +190,18 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         </select>
                         <ChevronDown size={14} style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
                     </div>
+                    <button style={{ padding: '8px 16px', border: '1px solid var(--primary)', background: 'transparent', color: 'var(--primary)', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={async () => {
+                        setRefreshing(true);
+                        try {
+                            const instance = instances.find(i => i.id === activeInstanceId);
+                            await ZendeskService.syncStaff(instance);
+                            alert("Synchronisation du staff (Noms/Photos) terminée !");
+                            onRefresh();
+                        } catch (e) { alert(e.message); }
+                        finally { setRefreshing(false); }
+                    }} disabled={refreshing}>
+                        <Users size={18} /> Sync Staff
+                    </button>
                     <button style={{ padding: '8px 16px', background: 'var(--primary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={onRefresh} disabled={refreshing}>
                         <RefreshCcw size={18} className={refreshing ? "animate-spin" : ""} /> Actualiser
                     </button>
@@ -211,7 +223,13 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                     <div style={{ padding: '8px', background: 'var(--primary-glow)', borderRadius: '8px', color: 'var(--primary)' }}>
                         <Globe size={18} />
                     </div>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                            {filteredAvailabilities.length} actif(s)
+                            {agentStatuses?.agent_availabilities?.length > filteredAvailabilities.length && ` (+${agentStatuses.agent_availabilities.length - filteredAvailabilities.length} masqués)`}
+                        </span>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -220,7 +238,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         const blacklistIds = ["25403312878748", "366626732000"];
 
                         const filteredAvailabilities = (agentStatuses?.agent_availabilities || []).filter(avail => {
-                            const agentId = String(avail?.attributes?.agent_id || avail?.agent_id);
+                            const agentId = String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id);
                             const agent = safeUsers?.find(u => String(u.id) === agentId);
                             const name = agent ? agent.name : "";
 
@@ -250,7 +268,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                             if (statusLower === 'online' || statusLower.includes('en ligne')) label = "En ligne";
                             else if (statusLower === 'away' || statusLower.includes('absent')) label = "Absent";
                             else if (statusLower === 'offline' || statusLower.includes('hors ligne')) label = "Hors ligne";
-                            else if (statusLower === 'transfer_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
+                            else if (statusLower === 'transfers_only' || statusLower.includes('transfert')) label = "Transfert uniquement";
 
                             // Extraction de la date (Timestamp)
                             let updatedAt = avail?.attributes?.updated_at || avail?.updated_at || avail?.attributes?.created_at || avail?.created_at || avail?.timestamp;

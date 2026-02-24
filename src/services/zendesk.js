@@ -60,6 +60,34 @@ export const ZendeskService = {
         }
     },
 
+    /**
+     * Synchronise tout le staff (Agents/Admins) indépendamment des tickets
+     */
+    async syncStaff(instance) {
+        if (!instance || !instance.domain || !instance.token) return { success: false };
+        const cleanDomain = this.sanitizeDomain(instance.domain);
+
+        try {
+            console.log("👥 BeeZen: Synchronisation du Staff complet...");
+            const response = await fetch(`${WORKER_URL}?action=sync_staff`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instanceId: instance.id,
+                    domain: cleanDomain,
+                    email: instance.email,
+                    token: instance.token
+                })
+            });
+
+            if (!response.ok) throw new Error(`Erreur sync_staff: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur Sync Staff BeeZen:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
     aggregateMetrics(tickets) {
         if (!tickets || tickets.length === 0) return {};
         const categories = {};
