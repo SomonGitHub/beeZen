@@ -163,14 +163,16 @@ async function handleAgentStatuses(request, env, corsHeaders) {
 
     try {
         const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities.json`;
+        // Zendesk Agent Availabilities API est une JSON:API, on retire le .json et on ajoute l'Accept
+        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities`;
 
         console.log(`Fetching agent statuses from: ${zendeskUrl}`);
 
         const response = await fetch(zendeskUrl, {
             headers: {
                 "Authorization": "Basic " + btoa(email + "/token:" + token),
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "application/vnd.api+json"
             }
         });
 
@@ -178,20 +180,23 @@ async function handleAgentStatuses(request, env, corsHeaders) {
             const errText = await response.text();
             console.error(`Zendesk API Error (${response.status}): ${errText}`);
 
-            // Si c'est une 404 ou 400, c'est probablement que l'Omnicanal n'est pas activé
-            if (response.status === 404 || response.status === 400) {
-                return new Response(JSON.stringify({
-                    error: "Feature not available",
-                    detail: "L'API Omnicanal/Unified Availability n'est pas activée sur cette instance Zendesk.",
-                    agent_availabilities: []
-                }), { headers: corsHeaders });
-            }
-            throw new Error(`Zendesk API Error: ${errText}`);
+            // On renvoie l'erreur brute pour le diagnostic
+            return new Response(JSON.stringify({
+                error: "Zendesk API Error",
+                detail: `Status ${response.status}: ${errText}`,
+                agent_availabilities: []
+            }), { headers: corsHeaders });
         }
 
         const data = await response.json();
-        console.log(`Fetched ${data.agent_availabilities?.length || 0} agent statuses`);
-        return new Response(JSON.stringify(data), { headers: corsHeaders });
+        // Dans JSON:API le format peut différer (data: [...])
+        const availabilities = data.data || data.agent_availabilities || [];
+
+        console.log(`Fetched ${availabilities.length} agent statuses`);
+        return new Response(JSON.stringify({
+            ...data,
+            agent_availabilities: availabilities
+        }), { headers: corsHeaders });
     } catch (e) {
         console.error(`Worker error in handleAgentStatuses: ${e.message}`);
         return new Response(JSON.stringify({ error: e.message, agent_availabilities: [] }), { status: 500, headers: corsHeaders });

@@ -203,16 +203,20 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     {(!agentStatuses.agent_availabilities || agentStatuses.agent_availabilities.length === 0) ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {refreshing ? "Recherche des agents..." : (agentStatuses.detail || "Aucun agent en ligne / Omnicanal non activé")}
+                            {refreshing ? "Recherche des agents..." : (agentStatuses.detail || "Aucun agent en ligne")}
                         </span>
                     ) : (
-                        agentStatuses.agent_availabilities.map(agentAvail => {
-                            // Comparaison robuste (string vs number)
-                            const agent = users.find(u => String(u.id) === String(agentAvail.agent_id));
+                        agentStatuses.agent_availabilities.map(avail => {
+                            // On gère le format standard et le format JSON:API (avail.attributes)
+                            const agentId = avail.attributes?.agent_id || avail.agent_id;
+                            const statusKind = avail.attributes?.agent_status || avail.status_kind;
+                            const statusName = avail.attributes?.agent_status || avail.status_name; // Simplifié si pas de status_name
+                            const updatedAt = avail.attributes?.updated_at || avail.updated_at;
 
-                            // Si l'agent n'est pas trouvé dans le cache des users, on affiche son ID
+                            const agent = users.find(u => String(u.id) === String(agentId));
+
                             return (
-                                <div key={agentAvail.agent_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
+                                <div key={agentId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
                                     <div style={{ position: 'relative' }}>
                                         {(agent && agent.photo_url) ? (
                                             <img src={agent.photo_url} alt={agent.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -221,12 +225,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                                 {agent ? agent.name.charAt(0) : '?'}
                                             </div>
                                         )}
-                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(agentAvail.status_kind), border: '2px solid #0c0e12' }}></div>
+                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(statusKind), border: '2px solid #0c0e12' }}></div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent ? agent.name : `Agent #${agentAvail.agent_id}`}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent ? agent.name : `Agent #${agentId}`}</span>
                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                                            {agentAvail.status_name} • {formatDuration(agentAvail.updated_at)}
+                                            {statusName} • {formatDuration(updatedAt)}
                                         </span>
                                     </div>
                                 </div>
