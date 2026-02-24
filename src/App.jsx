@@ -94,9 +94,8 @@ function App() {
       if (!instance) return;
 
       const sixtyDaysAgo = Math.floor(Date.now() / 1000) - (86400 * 60)
-      const ticketData = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
+      const { tickets: ticketData, users: userData } = await ZendeskService.fetchTickets(instance, sixtyDaysAgo)
       setTickets(ticketData || [])
-      const userData = await ZendeskService.fetchUsers(instance)
       setUsers(userData || [])
     } catch (err) {
       setError(err.message)

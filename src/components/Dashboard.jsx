@@ -206,14 +206,17 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     {(!agentStatuses?.agent_availabilities || agentStatuses?.agent_availabilities?.length === 0) ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {refreshing ? "Recherche des agents..." : (agentStatuses?.detail || "Aucun agent en ligne")}
+                            {refreshing ? "Recherche des agents..." : (typeof agentStatuses?.detail === 'string' ? agentStatuses.detail : (agentStatuses?.detail ? "Erreur API (Détail complexe)" : "Aucun agent en ligne"))}
                         </span>
                     ) : (
                         agentStatuses?.agent_availabilities?.map(avail => {
                             // On gère le format standard et le format JSON:API (avail.attributes)
                             const agentId = avail?.attributes?.agent_id || avail?.agent_id;
                             const statusKind = avail?.attributes?.agent_status || avail?.status_kind;
-                            const statusName = avail?.attributes?.agent_status || avail?.status_name; // Simplifié si pas de status_name
+                            let statusName = avail?.attributes?.agent_status || avail?.status_name;
+                            if (typeof statusName === 'object' && statusName !== null) {
+                                statusName = statusName.name || statusName.label || "Statut inconnu";
+                            }
                             const updatedAt = avail?.attributes?.updated_at || avail?.updated_at;
 
                             const agent = safeUsers?.find(u => String(u.id) === String(agentId));
