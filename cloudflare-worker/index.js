@@ -20,7 +20,7 @@ export default {
         if (action === "get_tickets") return await handleGetTickets(request, env, corsHeaders);
         if (action === "get_agent_statuses") return await handleAgentStatuses(request, env, corsHeaders);
 
-        return new Response("Action not found", { status: 400, headers: corsHeaders });
+        return await handleProxy(request, env, corsHeaders);
     },
 };
 
@@ -175,6 +175,7 @@ async function handleAgentStatuses(request, env, corsHeaders) {
         }
 
         const data = await response.json();
+        console.log(`Fetched ${data.agent_availabilities?.length || 0} agent statuses`);
         return new Response(JSON.stringify(data), { headers: corsHeaders });
     } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });

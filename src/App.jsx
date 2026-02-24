@@ -73,8 +73,12 @@ function App() {
     const instance = instances.find(i => i.id === activeInstanceId)
     if (!instance) return
     const data = await ZendeskService.fetchAgentStatuses(instance)
+    console.log("Agent Presence Data:", data);
     if (data && data.agent_availabilities) {
+      console.log(`Setting ${data.agent_availabilities.length} statuses`);
       setAgentStatuses(data.agent_availabilities)
+    } else {
+      console.warn("No agent availabilities found or API error");
     }
   }
 
