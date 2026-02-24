@@ -158,6 +158,39 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     return (
         <div style={{ padding: '2rem' }}>
+
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Tableau de Bord : {instance?.name}</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        Mise à jour : {lastUpdate} {refreshing && "(Sync en cours...)"} | Fuseau : Local (Navigateur)
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                        <Calendar size={16} color="var(--primary)" />
+                        <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.875rem', fontWeight: '600', outline: 'none', cursor: 'pointer', paddingRight: '20px', appearance: 'none' }}>
+                            <option value="today" style={{ background: '#1e293b' }}>Aujourd'hui</option>
+                            <option value="7d" style={{ background: '#1e293b' }}>7 derniers jours</option>
+                            <option value="30d" style={{ background: '#1e293b' }}>30 derniers jours</option>
+                        </select>
+                        <ChevronDown size={14} style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
+                    </div>
+                    <button style={{ padding: '8px 16px', background: 'var(--primary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={onRefresh} disabled={refreshing}>
+                        <RefreshCcw size={18} className={refreshing ? "animate-spin" : ""} /> Actualiser
+                    </button>
+                </div>
+            </header>
+
+            {/* Tabs de sélection d'instance */}
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '2rem', borderBottom: '1px solid var(--border-glass)' }}>
+                {instances.map(inst => (
+                    <button key={inst.id} onClick={() => setActiveInstanceId(inst.id)} style={{ padding: '12px 24px', background: 'transparent', border: 'none', borderBottom: activeInstanceId === inst.id ? '2px solid var(--primary)' : '2px solid transparent', color: activeInstanceId === inst.id ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: activeInstanceId === inst.id ? '600' : '400' }}>
+                        {inst.name}
+                    </button>
+                ))}
+            </div>
+
             {/* Bandeau de Présence Agents */}
             <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: `4px solid ${agentStatuses.length > 0 ? 'var(--primary)' : 'var(--text-muted)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-glass)', paddingRight: '1.5rem' }}>
@@ -201,38 +234,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         })
                     )}
                 </div>
-            </div>
-
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Tableau de Bord : {instance?.name}</h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        Mise à jour : {lastUpdate} {refreshing && "(Sync en cours...)"} | Fuseau : Local (Navigateur)
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
-                        <Calendar size={16} color="var(--primary)" />
-                        <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '0.875rem', fontWeight: '600', outline: 'none', cursor: 'pointer', paddingRight: '20px', appearance: 'none' }}>
-                            <option value="today" style={{ background: '#1e293b' }}>Aujourd'hui</option>
-                            <option value="7d" style={{ background: '#1e293b' }}>7 derniers jours</option>
-                            <option value="30d" style={{ background: '#1e293b' }}>30 derniers jours</option>
-                        </select>
-                        <ChevronDown size={14} style={{ position: 'absolute', right: '10px', pointerEvents: 'none' }} />
-                    </div>
-                    <button style={{ padding: '8px 16px', background: 'var(--primary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={onRefresh} disabled={refreshing}>
-                        <RefreshCcw size={18} className={refreshing ? "animate-spin" : ""} /> Actualiser
-                    </button>
-                </div>
-            </header>
-
-            {/* Tabs de sélection d'instance */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '2rem', borderBottom: '1px solid var(--border-glass)' }}>
-                {instances.map(inst => (
-                    <button key={inst.id} onClick={() => setActiveInstanceId(inst.id)} style={{ padding: '12px 24px', background: 'transparent', border: 'none', borderBottom: activeInstanceId === inst.id ? '2px solid var(--primary)' : '2px solid transparent', color: activeInstanceId === inst.id ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: activeInstanceId === inst.id ? '600' : '400' }}>
-                        {inst.name}
-                    </button>
-                ))}
             </div>
 
             {/* Dynamic KPIs Display */}
