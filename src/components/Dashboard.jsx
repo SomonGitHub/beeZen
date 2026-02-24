@@ -64,6 +64,9 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         let brands = {};
         let pending = 0;
         let hold = 0;
+        let resolved = 0;
+        let newCount = 0;
+        let openCount = 0;
         ticketList.forEach(t => {
             const chan = t.channel || t.via?.channel || 'autre';
             const brand = t.brand_name || 'Inconnu';
@@ -71,9 +74,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             brands[brand] = (brands[brand] || 0) + 1;
 
             if (t.status === 'pending') pending++;
-            if (t.status === 'hold') hold++;
+            else if (t.status === 'hold') hold++;
+            else if (t.status === 'solved' || t.status === 'closed') resolved++;
+            else if (t.status === 'new') newCount++;
+            else if (t.status === 'open') openCount++;
         });
-        return { total: ticketList.length, channels, brands, pending, hold };
+        return { total: ticketList.length, channels, brands, pending, hold, resolved, newCount, openCount };
     };
 
     const currentStats = aggregateData(currentTickets);
@@ -174,6 +180,21 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
                 {/* Deuxième ligne de KPIs pour les statuts critique */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--success)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Résolus</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--success)' }}>{currentStats.resolved}</p>
+                        {renderEvolution(currentStats.resolved, previousStats.resolved)}
+                    </div>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Nouveaux</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{currentStats.newCount}</p>
+                        {renderEvolution(currentStats.newCount, previousStats.newCount)}
+                    </div>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--accent)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Ouverts</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--accent)' }}>{currentStats.openCount}</p>
+                        {renderEvolution(currentStats.openCount, previousStats.openCount)}
+                    </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--warning)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>En Attente (Client)</p>
                         <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--warning)' }}>{currentStats.pending}</p>
