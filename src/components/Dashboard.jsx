@@ -170,6 +170,17 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
     const instance = instances.find(i => i.id === activeInstanceId) || instances[0];
 
+    const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
+    const blacklistIds = ["25403312878748", "366626732000"];
+
+    const filteredAvailabilities = (agentStatuses?.agent_availabilities || []).filter(avail => {
+        const agentId = String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id);
+        const agent = safeUsers?.find(u => String(u.id) === agentId);
+        const name = agent ? agent.name : "";
+
+        return !blacklistIds.includes(agentId) && !blacklistNames.some(bn => name.toUpperCase().includes(bn.toUpperCase()));
+    });
+
     return (
         <div style={{ padding: '2rem' }}>
 
@@ -233,27 +244,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {(() => {
-                        const blacklistNames = ["Marie VERRIERE", "Florent HOGGAS", "Jean-stephane VETOIS"];
-                        const blacklistIds = ["25403312878748", "366626732000"];
-
-                        const filteredAvailabilities = (agentStatuses?.agent_availabilities || []).filter(avail => {
-                            const agentId = String(avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id);
-                            const agent = safeUsers?.find(u => String(u.id) === agentId);
-                            const name = agent ? agent.name : "";
-
-                            return !blacklistIds.includes(agentId) && !blacklistNames.some(bn => name.toUpperCase().includes(bn.toUpperCase()));
-                        });
-
-                        if (filteredAvailabilities.length === 0) {
-                            return (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                    {refreshing ? "Recherche des agents..." : (typeof agentStatuses?.detail === 'string' ? agentStatuses.detail : (agentStatuses?.detail ? "Erreur API (Détail complexe)" : "Aucun agent en ligne"))}
-                                </span>
-                            );
-                        }
-
-                        return filteredAvailabilities.map(avail => {
+                    {filteredAvailabilities.length === 0 ? (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            {refreshing ? "Recherche des agents..." : (typeof agentStatuses?.detail === 'string' ? agentStatuses.detail : (agentStatuses?.detail ? "Erreur API (Détail complexe)" : "Aucun agent en ligne"))}
+                        </span>
+                    ) : (
+                        filteredAvailabilities.map(avail => {
                             const agentId = avail?.attributes?.agent_id || avail?.agent_id || avail?.user_id;
                             const statusKind = avail?.attributes?.agent_status || avail?.status_kind || avail?.status;
                             let statusName = avail?.attributes?.agent_status || avail?.status_name || statusKind;
@@ -301,7 +297,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                                 </div>
                             );
                         })
-                    })()}
+                    )}
                 </div>
             </div>
 
