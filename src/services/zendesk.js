@@ -77,7 +77,8 @@ export const ZendeskService = {
 
     async fetchAgentStatuses(instance) {
         try {
-            const url = `${WORKER_URL}?action=get_agent_statuses&domain=${instance.domain}&email=${instance.email}&token=${instance.token}`;
+            const cleanDomain = this.sanitizeDomain(instance.domain);
+            const url = `${WORKER_URL}?action=get_agent_statuses&domain=${cleanDomain}&email=${instance.email}&token=${instance.token}`;
             const response = await fetch(url);
             if (!response.ok) throw new Error('Fetch failed');
             return await response.json();

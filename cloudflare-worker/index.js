@@ -162,7 +162,8 @@ async function handleAgentStatuses(request, env, corsHeaders) {
     }
 
     try {
-        const response = await fetch(`https://${domain}/api/v2/agent_availabilities.json`, {
+        const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        const response = await fetch(`https://${cleanDomain}/api/v2/agent_availabilities.json`, {
             headers: {
                 "Authorization": "Basic " + btoa(email + "/token:" + token),
                 "Content-Type": "application/json"
