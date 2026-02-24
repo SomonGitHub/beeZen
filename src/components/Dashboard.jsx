@@ -180,11 +180,6 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
                 {/* Deuxième ligne de KPIs pour les statuts critique */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--success)' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Résolus</p>
-                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--success)' }}>{currentStats.resolved}</p>
-                        {renderEvolution(currentStats.resolved, previousStats.resolved)}
-                    </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Nouveaux</p>
                         <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{currentStats.newCount}</p>
@@ -194,6 +189,11 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Ouverts</p>
                         <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--accent)' }}>{currentStats.openCount}</p>
                         {renderEvolution(currentStats.openCount, previousStats.openCount)}
+                    </div>
+                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--success)' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Résolus</p>
+                        <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--success)' }}>{currentStats.resolved}</p>
+                        {renderEvolution(currentStats.resolved, previousStats.resolved)}
                     </div>
                     <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--warning)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>En Attente (Client)</p>
