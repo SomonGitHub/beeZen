@@ -19,6 +19,7 @@ function App() {
   const [activeInstanceId, setActiveInstanceId] = useState(null)
   const [tickets, setTickets] = useState([])
   const [users, setUsers] = useState([])
+  const [agentStatuses, setAgentStatuses] = useState([])
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
 
@@ -53,8 +54,29 @@ function App() {
   useEffect(() => {
     if (session && activeInstanceId) {
       handleRefresh()
+      fetchPresence()
     }
   }, [activeInstanceId])
+
+  // 3. Polling Présence Agents (60s)
+  useEffect(() => {
+    let interval;
+    if (session && activeInstanceId) {
+      interval = setInterval(() => {
+        fetchPresence()
+      }, 60000)
+    }
+    return () => clearInterval(interval)
+  }, [session, activeInstanceId, instances])
+
+  const fetchPresence = async () => {
+    const instance = instances.find(i => i.id === activeInstanceId)
+    if (!instance) return
+    const data = await ZendeskService.fetchAgentStatuses(instance)
+    if (data && data.agent_availabilities) {
+      setAgentStatuses(data.agent_availabilities)
+    }
+  }
 
   // Fonction légère pour recharger les instances (utile pour Settings)
   const loadInstancesOnly = async () => {
@@ -99,6 +121,7 @@ function App() {
             setActiveInstanceId={setActiveInstanceId}
             tickets={tickets}
             users={users}
+            agentStatuses={agentStatuses}
             refreshing={refreshing}
             onRefresh={handleRefresh}
             error={error}

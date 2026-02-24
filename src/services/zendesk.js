@@ -73,5 +73,17 @@ export const ZendeskService = {
             categories[theme] = (categories[theme] || 0) + 1;
         });
         return categories;
+    },
+
+    async fetchAgentStatuses(instance) {
+        try {
+            const url = `${WORKER_URL}?action=get_agent_statuses&domain=${instance.domain}&email=${instance.email}&token=${instance.token}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Fetch failed');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching agent statuses:', error);
+            return null;
+        }
     }
 };

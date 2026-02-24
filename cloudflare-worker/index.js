@@ -18,7 +18,9 @@ export default {
 
         if (action === "sync") return await handleSync(request, env, corsHeaders);
         if (action === "get_tickets") return await handleGetTickets(request, env, corsHeaders);
-        return await handleProxy(request, env, corsHeaders);
+        if (action === "get_agent_statuses") return await handleAgentStatuses(request, env, corsHeaders);
+
+        return new Response("Action not found", { status: 400, headers: corsHeaders });
     },
 };
 
@@ -147,4 +149,34 @@ async function handleProxy(request, env, corsHeaders) {
     let body = request.method === "POST" ? await request.text() : null;
     const response = await fetch(targetUrl, { method: request.method, headers, body });
     return new Response(await response.text(), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+async function handleAgentStatuses(request, env, corsHeaders) {
+    const url = new URL(request.url);
+    const domain = url.searchParams.get("domain");
+    const email = url.searchParams.get("email");
+    const token = url.searchParams.get("token");
+
+    if (!domain || !email || !token) {
+        return new Response(JSON.stringify({ error: "Credentials missing" }), { status: 400, headers: corsHeaders });
+    }
+
+    try {
+        const response = await fetch(`https://${domain}/api/v2/agent_availabilities.json`, {
+            headers: {
+                "Authorization": "Basic " + btoa(email + "/token:" + token),
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Zendesk API Error: ${err}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { headers: corsHeaders });
+    } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+    }
 }

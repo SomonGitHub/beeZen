@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
 
-const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, users, refreshing, onRefresh, error }) => {
+const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, users, agentStatuses, refreshing, onRefresh, error }) => {
     const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString());
     const [timeFilter, setTimeFilter] = useState('today'); // 'today', '7d', '30d'
 
@@ -133,10 +133,71 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         );
     };
 
+    const formatDuration = (timestamp) => {
+        if (!timestamp) return '...';
+        const start = new Date(timestamp).getTime();
+        const diff = Math.floor((Date.now() - start) / 1000);
+
+        if (diff < 60) return `${diff}s`;
+        const mins = Math.floor(diff / 60);
+        if (mins < 60) return `${mins}min`;
+        const hours = Math.floor(mins / 60);
+        return `${hours}h ${mins % 60}m`;
+    };
+
+    const getStatusColor = (kind) => {
+        switch (kind) {
+            case 'online': return '#22c55e';
+            case 'away': return '#f59e0b';
+            case 'offline': return '#94a3b8';
+            default: return '#94a3b8';
+        }
+    };
+
     const instance = instances.find(i => i.id === activeInstanceId) || instances[0];
 
     return (
         <div style={{ padding: '2rem' }}>
+            {/* Bandeau de Présence Agents */}
+            {agentStatuses && agentStatuses.length > 0 && (
+                <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: '4px solid var(--primary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-glass)', paddingRight: '1.5rem' }}>
+                        <div style={{ padding: '8px', background: 'var(--primary-glow)', borderRadius: '8px', color: 'var(--primary)' }}>
+                            <Globe size={18} />
+                        </div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Agents</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        {agentStatuses.map(agentAvail => {
+                            const agent = users.find(u => u.id === agentAvail.agent_id);
+                            if (!agent) return null;
+
+                            return (
+                                <div key={agentAvail.agent_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
+                                    <div style={{ position: 'relative' }}>
+                                        {agent.photo_url ? (
+                                            <img src={agent.photo_url} alt={agent.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: '800' }}>
+                                                {agent.name.charAt(0)}
+                                            </div>
+                                        )}
+                                        <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: getStatusColor(agentAvail.status_kind), border: '2px solid #0c0e12' }}></div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{agent.name}</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                                            {agentAvail.status_name} • {formatDuration(agentAvail.updated_at)}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Tableau de Bord : {instance?.name}</h2>
