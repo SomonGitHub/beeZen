@@ -101,19 +101,34 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     }
 
     const renderEvolution = (curr, prev) => {
-        if (!prev || prev === 0) return null;
-        const percent = ((curr - prev) / prev) * 100;
-        if (Math.abs(percent) < 1) return null;
+        // Si prev n'est pas un nombre ou indéfini, on ne peut rien comparer
+        if (typeof prev === 'undefined') return null;
 
-        const isIncrease = percent > 0;
-        const color = isIncrease ? 'var(--danger)' : '#22c55e';
-        const Icon = isIncrease ? TrendingUp : TrendingDown;
+        // Calcul du pourcentage (0% si curr == prev, Infinity si prev == 0)
+        let percent = 0;
+        let isNew = false;
+
+        if (prev > 0) {
+            percent = ((curr - prev) / prev) * 100;
+        } else if (curr > 0) {
+            isNew = true; // Passage de 0 à X
+        } else if (curr === 0 && prev === 0) {
+            percent = 0;
+        }
+
+        const isIncrease = percent > 0 || isNew;
+        const isNeutral = percent === 0 && !isNew;
+
+        // Couleurs : Rouge pour augmentation, Vert pour baisse (sur le volume de tickets)
+        // Note: Pour "Résolus", l'augmentation est positive (verte), mais on garde la logique Volume = Rouge pour l'instant
+        const color = isNeutral ? 'var(--text-muted)' : isIncrease ? 'var(--danger)' : '#22c55e';
+        const Icon = isNeutral ? null : isIncrease ? TrendingUp : TrendingDown;
 
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: color, fontSize: '0.75rem', fontWeight: '700', marginTop: '4px' }}>
-                <Icon size={12} />
-                {isIncrease ? '+' : ''}{percent.toFixed(0)}%
-                <span style={{ opacity: 0.8, marginLeft: '4px', fontWeight: '400', fontSize: '0.7rem' }}>({prev})</span>
+                {Icon && <Icon size={12} />}
+                {isNew ? "+New" : `${isIncrease ? '+' : ''}${percent.toFixed(0)}%`}
+                <span style={{ opacity: 0.8, marginLeft: '4px', fontWeight: '400', fontSize: '0.7rem', color: 'var(--text-muted)' }}>({prev})</span>
             </div>
         );
     };
