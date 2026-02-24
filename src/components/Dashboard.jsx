@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { RefreshCcw, AlertTriangle, Globe, Calendar, ChevronDown, TrendingUp, TrendingDown, ExternalLink, Users } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ZendeskService } from '../services/zendesk';
 import AgentPerformance from './AgentPerformance';
