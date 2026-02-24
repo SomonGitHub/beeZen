@@ -74,11 +74,8 @@ function App() {
     if (!instance) return
     const data = await ZendeskService.fetchAgentStatuses(instance)
     console.log("Agent Presence Data:", data);
-    if (data && data.agent_availabilities) {
-      console.log(`Setting ${data.agent_availabilities.length} statuses`);
-      setAgentStatuses(data.agent_availabilities)
-    } else {
-      console.warn("No agent availabilities found or API error");
+    if (data) {
+      setAgentStatuses(data)
     }
   }
 
@@ -125,7 +122,7 @@ function App() {
             setActiveInstanceId={setActiveInstanceId}
             tickets={tickets}
             users={users}
-            agentStatuses={agentStatuses}
+            agentStatuses={agentStatuses} // agentStatuses is now the raw object
             refreshing={refreshing}
             onRefresh={handleRefresh}
             error={error}

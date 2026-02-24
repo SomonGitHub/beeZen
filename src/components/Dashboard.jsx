@@ -201,12 +201,12 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {agentStatuses.length === 0 ? (
+                    {(!agentStatuses.agent_availabilities || agentStatuses.agent_availabilities.length === 0) ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            {refreshing ? "Recherche des agents..." : "Aucun agent en ligne / Omnicanal non activé"}
+                            {refreshing ? "Recherche des agents..." : (agentStatuses.detail || "Aucun agent en ligne / Omnicanal non activé")}
                         </span>
                     ) : (
-                        agentStatuses.map(agentAvail => {
+                        agentStatuses.agent_availabilities.map(agentAvail => {
                             // Comparaison robuste (string vs number)
                             const agent = users.find(u => String(u.id) === String(agentAvail.agent_id));
 

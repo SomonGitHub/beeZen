@@ -163,7 +163,11 @@ async function handleAgentStatuses(request, env, corsHeaders) {
 
     try {
         const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-        const response = await fetch(`https://${cleanDomain}/api/v2/agent_availabilities.json`, {
+        const zendeskUrl = `https://${cleanDomain}/api/v2/agent_availabilities.json`;
+
+        console.log(`Fetching agent statuses from: ${zendeskUrl}`);
+
+        const response = await fetch(zendeskUrl, {
             headers: {
                 "Authorization": "Basic " + btoa(email + "/token:" + token),
                 "Content-Type": "application/json"
@@ -171,14 +175,25 @@ async function handleAgentStatuses(request, env, corsHeaders) {
         });
 
         if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Zendesk API Error: ${err}`);
+            const errText = await response.text();
+            console.error(`Zendesk API Error (${response.status}): ${errText}`);
+
+            // Si c'est une 404 ou 400, c'est probablement que l'Omnicanal n'est pas activé
+            if (response.status === 404 || response.status === 400) {
+                return new Response(JSON.stringify({
+                    error: "Feature not available",
+                    detail: "L'API Omnicanal/Unified Availability n'est pas activée sur cette instance Zendesk.",
+                    agent_availabilities: []
+                }), { headers: corsHeaders });
+            }
+            throw new Error(`Zendesk API Error: ${errText}`);
         }
 
         const data = await response.json();
         console.log(`Fetched ${data.agent_availabilities?.length || 0} agent statuses`);
         return new Response(JSON.stringify(data), { headers: corsHeaders });
     } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+        console.error(`Worker error in handleAgentStatuses: ${e.message}`);
+        return new Response(JSON.stringify({ error: e.message, agent_availabilities: [] }), { status: 500, headers: corsHeaders });
     }
 }
