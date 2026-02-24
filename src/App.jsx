@@ -19,7 +19,7 @@ function App() {
   const [activeInstanceId, setActiveInstanceId] = useState(null)
   const [tickets, setTickets] = useState([])
   const [users, setUsers] = useState([])
-  const [agentStatuses, setAgentStatuses] = useState([])
+  const [agentStatuses, setAgentStatuses] = useState({ agent_availabilities: [] })
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
 

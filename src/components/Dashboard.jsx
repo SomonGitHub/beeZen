@@ -192,7 +192,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             </div>
 
             {/* Bandeau de Présence Agents */}
-            <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: `4px solid ${agentStatuses.length > 0 ? 'var(--primary)' : 'var(--text-muted)'}` }}>
+            <div className="glass" style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', overflowX: 'auto', borderLeft: `4px solid ${(agentStatuses.agent_availabilities?.length > 0) ? 'var(--primary)' : 'var(--text-muted)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-glass)', paddingRight: '1.5rem' }}>
                     <div style={{ padding: '8px', background: 'var(--primary-glow)', borderRadius: '8px', color: 'var(--primary)' }}>
                         <Globe size={18} />
