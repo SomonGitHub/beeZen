@@ -2,15 +2,17 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Users } from 'lucide-react';
 
-const AgentPerformance = ({ tickets, users = [] }) => {
+const AgentPerformance = ({ tickets = [], users = [] }) => {
     // Création d'un dictionnaire ID -> Nom pour un accès rapide
-    const userMap = users.reduce((acc, user) => {
+    const safeUsers = Array.isArray(users) ? users : [];
+    const userMap = safeUsers.reduce((acc, user) => {
         acc[user.id] = user.name;
         return acc;
     }, {});
 
     // Agrégation des tickets par Agent
-    const agentData = tickets.reduce((acc, ticket) => {
+    const safeTickets = Array.isArray(tickets) ? tickets : [];
+    const agentData = safeTickets.reduce((acc, ticket) => {
         const id = ticket.assignee_id || 'Non assigné';
         if (!acc[id]) {
             acc[id] = {

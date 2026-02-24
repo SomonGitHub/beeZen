@@ -8,11 +8,14 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString());
     const [timeFilter, setTimeFilter] = useState('today'); // 'today', '7d', '30d'
 
+    const safeTickets = Array.isArray(tickets) ? tickets : [];
+    const safeUsers = Array.isArray(users) ? users : [];
+
     useEffect(() => {
-        if (tickets.length > 0) {
+        if (safeTickets.length > 0) {
             setLastUpdate(new Date().toLocaleTimeString());
         }
-    }, [tickets]);
+    }, [safeTickets]);
 
     // Calcul des périodes (Actuelle vs Précédente)
     const getPeriods = () => {
@@ -46,14 +49,14 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
     const { current, previous } = getPeriods();
 
     // Nettoyage et filtrage des tickets (Exclude deleted & spam technically if possible)
-    const cleanTickets = (list) => list.filter(t => t.status !== 'deleted' && t.status !== 'spam');
+    const cleanTickets = (list) => (Array.isArray(list) ? list : []).filter(t => t.status !== 'deleted' && t.status !== 'spam');
 
-    const currentTickets = cleanTickets(tickets.filter(t => {
+    const currentTickets = cleanTickets(safeTickets.filter(t => {
         const ts = new Date(t.created_at).getTime() / 1000;
         return ts >= current.start && ts <= current.end;
     }));
 
-    const previousTickets = cleanTickets(tickets.filter(t => {
+    const previousTickets = cleanTickets(safeTickets.filter(t => {
         const ts = new Date(t.created_at).getTime() / 1000;
         return ts >= previous.start && ts <= previous.end;
     }));
@@ -67,7 +70,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
         let resolved = 0;
         let newCount = 0;
         let openCount = 0;
-        ticketList.forEach(t => {
+        (ticketList || []).forEach(t => {
             const chan = t.channel || t.via?.channel || 'autre';
             const brand = t.brand_name || 'Inconnu';
             channels[chan] = (channels[chan] || 0) + 1;
@@ -79,7 +82,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
             else if (t.status === 'new') newCount++;
             else if (t.status === 'open') openCount++;
         });
-        return { total: ticketList.length, channels, brands, pending, hold, resolved, newCount, openCount };
+        return { total: (ticketList || []).length, channels, brands, pending, hold, resolved, newCount, openCount };
     };
 
     const currentStats = aggregateData(currentTickets);
@@ -201,19 +204,19 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    {(!agentStatuses?.agent_availabilities || agentStatuses.agent_availabilities.length === 0) ? (
+                    {(!agentStatuses?.agent_availabilities || agentStatuses?.agent_availabilities?.length === 0) ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                             {refreshing ? "Recherche des agents..." : (agentStatuses?.detail || "Aucun agent en ligne")}
                         </span>
                     ) : (
-                        agentStatuses.agent_availabilities.map(avail => {
+                        agentStatuses?.agent_availabilities?.map(avail => {
                             // On gère le format standard et le format JSON:API (avail.attributes)
                             const agentId = avail?.attributes?.agent_id || avail?.agent_id;
                             const statusKind = avail?.attributes?.agent_status || avail?.status_kind;
                             const statusName = avail?.attributes?.agent_status || avail?.status_name; // Simplifié si pas de status_name
                             const updatedAt = avail?.attributes?.updated_at || avail?.updated_at;
 
-                            const agent = users?.find(u => String(u.id) === String(agentId));
+                            const agent = safeUsers?.find(u => String(u.id) === String(agentId));
 
                             return (
                                 <div key={agentId || Math.random()} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid var(--border-glass)' }}>
@@ -338,7 +341,7 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
                 )}
             </div>
 
-            <AgentPerformance tickets={currentTickets} users={users} />
+            <AgentPerformance tickets={currentTickets} users={safeUsers} />
 
             {/* Table de vérification pour "Aujourd'hui" */}
             <div className="glass" style={{ padding: '1.5rem', marginTop: '2.5rem' }}>
