@@ -156,26 +156,43 @@ const Dashboard = ({ instances, activeInstanceId, setActiveInstanceId, tickets, 
 
             {/* Dynamic KPIs Display */}
             <div style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
-                    <div className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Total Créés</p>
-                        <p style={{ fontSize: '1.8rem', fontWeight: '800' }}>{currentStats.total}</p>
-                        {renderEvolution(currentStats.total, previousStats.total)}
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    {/* Colonne Gauche : Total */}
+                    <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
+                        <div className="glass" style={{ padding: '0.75rem 1rem', textAlign: 'center', minWidth: '140px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Total Créés</p>
+                            <p style={{ fontSize: '1.8rem', fontWeight: '800' }}>{currentStats.total}</p>
+                            {renderEvolution(currentStats.total, previousStats.total)}
+                        </div>
                     </div>
-                    {Object.entries(currentStats.channels).map(([chan, count]) => (
-                        <div key={chan} className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Canal: {chan}</p>
-                            <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--secondary)' }}>{count}</p>
-                            {renderEvolution(count, previousStats.channels[chan] || 0)}
+
+                    {/* Groupe Canaux */}
+                    <div style={{ flex: 1, minWidth: '300px', padding: '0.8rem', borderRadius: '16px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginLeft: '4px' }}>Répartition par Canaux</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                            {Object.entries(currentStats.channels).map(([chan, count]) => (
+                                <div key={chan} className="glass" style={{ padding: '0.6rem 0.4rem', textAlign: 'center', borderBottom: '2px solid var(--secondary)' }}>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.6rem', marginBottom: '0.2rem', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{chan}</p>
+                                    <p style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--secondary)' }}>{count}</p>
+                                    {renderEvolution(count, previousStats.channels[chan] || 0)}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                    {Object.entries(currentStats.brands).map(([brand, count]) => (
-                        <div key={brand} className="glass" style={{ padding: '0.75rem 0.5rem', textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.65rem', marginBottom: '0.2rem', textTransform: 'uppercase' }}>Marque: {brand}</p>
-                            <p style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>{count}</p>
-                            {renderEvolution(count, previousStats.brands[brand] || 0)}
+                    </div>
+
+                    {/* Groupe Marques */}
+                    <div style={{ flex: 1, minWidth: '300px', padding: '0.8rem', borderRadius: '16px', border: '1px solid var(--border-glass)', background: 'rgba(255,255,255,0.01)' }}>
+                        <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginLeft: '4px' }}>Répartition par Marques</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                            {Object.entries(currentStats.brands).map(([brand, count]) => (
+                                <div key={brand} className="glass" style={{ padding: '0.6rem 0.4rem', textAlign: 'center', borderBottom: '2px solid var(--primary)' }}>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.6rem', marginBottom: '0.2rem', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{brand}</p>
+                                    <p style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--primary)' }}>{count}</p>
+                                    {renderEvolution(count, previousStats.brands[brand] || 0)}
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </div>
                 </div>
 
                 {/* Deuxième ligne de KPIs pour les statuts critique */}
